@@ -1,8 +1,9 @@
 package com.app.Model;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import org.springframework.data.annotation.Id;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,4 +16,5 @@ public class User {
     private String username;
     private String email;
     private String password;
+    private List<Role> roles;
 }

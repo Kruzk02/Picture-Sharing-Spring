@@ -23,10 +23,13 @@ public class DatabaseInitializationService {
     @PostConstruct
     public void initializeDatabase() {
         try {
-
             executeSqlScript("user.sql");
             executeSqlScript("board.sql");
             executeSqlScript("pin.sql");
+            executeSqlScript("roles.sql");
+            executeSqlScript("privileges.sql");
+            executeSqlScript("roles_privileges.sql");
+            executeSqlScript("users_roles.sql");
         } catch (Exception e) {
             log.error("Error initializing database: {}", e.getMessage());
         }
