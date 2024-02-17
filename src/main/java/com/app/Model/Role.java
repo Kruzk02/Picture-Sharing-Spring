@@ -15,4 +15,8 @@ public class Role {
     private String name;
     private User user;
     private List<Privilege> privileges;
+
+    public Role(String name) {
+        this.name = name;
+    }
 }

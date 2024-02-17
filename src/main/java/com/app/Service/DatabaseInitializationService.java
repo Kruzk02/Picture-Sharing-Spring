@@ -1,5 +1,9 @@
 package com.app.Service;
 
+import com.app.DAO.Impl.PrivilegeDaoImpl;
+import com.app.DAO.Impl.RoleDaoImpl;
+import com.app.Model.Privilege;
+import com.app.Model.Role;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +16,23 @@ import org.springframework.util.FileCopyUtils;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 @Log4j2
 public class DatabaseInitializationService {
 
+    private final JdbcTemplate jdbcTemplate;
+    private final RoleDaoImpl roleDao;
+    private final PrivilegeDaoImpl privilegeDao;
+
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDaoImpl roleDao, PrivilegeDaoImpl privilegeDao) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.roleDao = roleDao;
+        this.privilegeDao = privilegeDao;
+    }
 
     @PostConstruct
     public void initializeDatabase() {
@@ -30,6 +44,14 @@ public class DatabaseInitializationService {
             executeSqlScript("privileges.sql");
             executeSqlScript("roles_privileges.sql");
             executeSqlScript("users_roles.sql");
+
+            Privilege readPrivilege = createPrivilegeIfNotFound("READ_PRIVILEGE");
+            Privilege writePrivilege = createPrivilegeIfNotFound("WRITE_PRIVILEGE");
+
+            List<Privilege> adminPrivilege = Arrays.asList(readPrivilege,writePrivilege);
+            createRoleIfNotFound("ROLE_ADMIN",adminPrivilege);
+            createRoleIfNotFound("ROLE_USER",Arrays.asList(readPrivilege));
+
         } catch (Exception e) {
             log.error("Error initializing database: {}", e.getMessage());
         }
@@ -44,5 +66,39 @@ public class DatabaseInitializationService {
         } catch (Exception e) {
             log.error("Error executing SQL script from file {}: {}", fileName, e.getMessage());
         }
+    }
+
+    private Privilege createPrivilegeIfNotFound(String name){
+        log.info("Checking if privilege exist with a name: {}",name);
+
+        Privilege privilege = privilegeDao.findByName(name);
+        if(privilege == null){
+            log.info("Privilege with name {} not found. Creating new privilege.", name);
+
+            privilege = new Privilege(name);
+            privilegeDao.create(privilege);
+
+            log.info("Privilege created: {}", privilege);
+        }else{
+            log.info("Privilege with name {} already exist",name);
+        }
+        return privilege;
+    }
+
+    private Role createRoleIfNotFound(String name, List<Privilege> privileges){
+        log.info("Checking if role exist with a name: {}",name);
+        Role role = roleDao.findByName(name);
+        if(role == null){
+            log.info("Role with name {} not found. Create new Role",name);
+
+            role = new Role(name);
+            role.setPrivileges(privileges);
+            roleDao.create(role);
+
+            log.info("Role created: {}",role);
+        }else{
+            log.info("Role with name {} already exist",name);
+        }
+        return role;
     }
 }
