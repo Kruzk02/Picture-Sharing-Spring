@@ -2,6 +2,7 @@ package com.app.Service;
 
 import com.app.DAO.Impl.PrivilegeDaoImpl;
 import com.app.DAO.Impl.RoleDaoImpl;
+import com.app.DAO.Impl.RolePrivilegeDaoImpl;
 import com.app.Model.Privilege;
 import com.app.Model.Role;
 import jakarta.annotation.PostConstruct;
@@ -26,12 +27,14 @@ public class DatabaseInitializationService {
     private final JdbcTemplate jdbcTemplate;
     private final RoleDaoImpl roleDao;
     private final PrivilegeDaoImpl privilegeDao;
+    private final RolePrivilegeDaoImpl rolePrivilegeDao;
 
     @Autowired
-    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDaoImpl roleDao, PrivilegeDaoImpl privilegeDao) {
+    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDaoImpl roleDao, PrivilegeDaoImpl privilegeDao, RolePrivilegeDaoImpl rolePrivilegeDao) {
         this.jdbcTemplate = jdbcTemplate;
         this.roleDao = roleDao;
         this.privilegeDao = privilegeDao;
+        this.rolePrivilegeDao = rolePrivilegeDao;
     }
 
     @PostConstruct
@@ -51,6 +54,11 @@ public class DatabaseInitializationService {
             List<Privilege> adminPrivilege = Arrays.asList(readPrivilege,writePrivilege);
             createRoleIfNotFound("ROLE_ADMIN",adminPrivilege);
             createRoleIfNotFound("ROLE_USER",Arrays.asList(readPrivilege));
+
+            // A Role.getId(); keep null so i have to use Long to make thing work.
+//            rolePrivilegeDao.addPrivilegeToRole(1L,readPrivilege);
+//            rolePrivilegeDao.addPrivilegeToRole(1L,writePrivilege);
+//            rolePrivilegeDao.addPrivilegeToRole(2L,readPrivilege);
 
         } catch (Exception e) {
             log.error("Error initializing database: {}", e.getMessage());
