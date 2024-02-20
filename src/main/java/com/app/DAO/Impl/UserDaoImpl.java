@@ -35,7 +35,7 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
-    public User login(User user) {
+    public User login(String username) {
         String sql = "SELECT username,password from users where username = ?";
         return jdbcTemplate.queryForObject(sql,new UserRowMapper());
     }

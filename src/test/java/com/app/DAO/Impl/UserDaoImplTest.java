@@ -45,7 +45,7 @@ public class UserDaoImplTest {
                 .password("test")
                 .build();
 
-        userDao.login(user);
+        userDao.login(user.getUsername());
 
         verify(jdbcTemplate).queryForObject(eq(sql), any(UserRowMapper.class));
     }

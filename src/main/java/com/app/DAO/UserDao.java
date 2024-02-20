@@ -7,7 +7,7 @@ import com.app.Model.User;
 public interface UserDao {
 
     User register(User user);
-    User login(User user);
+    User login(String username);
     User findUserById(Long id);
     User findUserByUsername(String username);
 }
