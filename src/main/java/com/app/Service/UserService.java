@@ -56,4 +56,8 @@ public class UserService {
     public User findUserById(Long id){
         return userDao.findUserById(id);
     }
+
+    public User findUserByEmail(String email){
+        return userDao.findUserByEmail(email);
+    }
 }

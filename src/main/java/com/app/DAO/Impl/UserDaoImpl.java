@@ -51,6 +51,12 @@ public class UserDaoImpl implements UserDao {
         String sql = "SELECT * from users where username =?";
         return jdbcTemplate.queryForObject(sql,new UserRowMapper(),username);
     }
+
+    @Override
+    public User findUserByEmail(String email) {
+        String sql = "SELECT * from users where email =?";
+        return jdbcTemplate.queryForObject(sql,new UserRowMapper(),email);
+    }
 }
 
 class UserRowMapper implements RowMapper<User> {

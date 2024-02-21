@@ -56,9 +56,9 @@ public class DatabaseInitializationService {
             createRoleIfNotFound("ROLE_USER",Arrays.asList(readPrivilege));
 
             // A Role.getId(); keep null so i have to use Long to make thing work.
-//            rolePrivilegeDao.addPrivilegeToRole(1L,readPrivilege);
-//            rolePrivilegeDao.addPrivilegeToRole(1L,writePrivilege);
-//            rolePrivilegeDao.addPrivilegeToRole(2L,readPrivilege);
+            rolePrivilegeDao.addPrivilegeToRole(1L,readPrivilege);
+            rolePrivilegeDao.addPrivilegeToRole(1L,writePrivilege);
+            rolePrivilegeDao.addPrivilegeToRole(2L,readPrivilege);
 
         } catch (Exception e) {
             log.error("Error initializing database: {}", e.getMessage());
