@@ -2,6 +2,7 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.RolePrivilegeDao;
 import com.app.Model.Privilege;
+import com.app.Model.Role;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,10 +20,10 @@ public class RolePrivilegeDaoImpl implements RolePrivilegeDao {
     }
 
     @Override
-    public void addPrivilegeToRole(Long roleId, Privilege privilege) {
-        if(roleId != null && privilege.getId() != null){
+    public void addPrivilegeToRole(Role role, Privilege privilege) {
+        if(role.getId() != null && privilege.getId() != null){
             String sql = "INSERT INTO roles_privileges(roles_id, privileges_id) VALUES (?, ?)";
-            jdbcTemplate.update(sql,roleId, privilege.getId());
+            jdbcTemplate.update(sql,role.getId(), privilege.getId());
         }else{
             //after done insert you have to comment addPrivilegeToRole method in DatabaseInitializationServer class.
             log.warn("Please reset a project to insert roles privilege table.");

@@ -52,13 +52,12 @@ public class DatabaseInitializationService {
             Privilege writePrivilege = createPrivilegeIfNotFound("WRITE_PRIVILEGE");
 
             List<Privilege> adminPrivilege = Arrays.asList(readPrivilege,writePrivilege);
-            createRoleIfNotFound("ROLE_ADMIN",adminPrivilege);
-            createRoleIfNotFound("ROLE_USER",Arrays.asList(readPrivilege));
+            Role adminRole = createRoleIfNotFound("ROLE_ADMIN",adminPrivilege);
+            Role userRole = createRoleIfNotFound("ROLE_USER",Arrays.asList(readPrivilege));
 
-            // A Role.getId(); keep null so i have to use Long to make thing work.
-            rolePrivilegeDao.addPrivilegeToRole(1L,readPrivilege);
-            rolePrivilegeDao.addPrivilegeToRole(1L,writePrivilege);
-            rolePrivilegeDao.addPrivilegeToRole(2L,readPrivilege);
+//            rolePrivilegeDao.addPrivilegeToRole(adminRole,readPrivilege);
+//            rolePrivilegeDao.addPrivilegeToRole(adminRole,writePrivilege);
+//            rolePrivilegeDao.addPrivilegeToRole(userRole,readPrivilege);
 
         } catch (Exception e) {
             log.error("Error initializing database: {}", e.getMessage());
