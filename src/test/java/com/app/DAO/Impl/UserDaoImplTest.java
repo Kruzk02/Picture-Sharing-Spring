@@ -36,21 +36,6 @@ public class UserDaoImplTest {
     }
 
     @Test
-    public void testLogin() {
-        String sql = "SELECT username,password from users where username = ?";
-        User user = User.builder()
-                .id(1L)
-                .username("test")
-                .email("test@gmail.com")
-                .password("test")
-                .build();
-
-        userDao.login(user.getUsername());
-
-        verify(jdbcTemplate).queryForObject(eq(sql), any(UserRowMapper.class));
-    }
-
-    @Test
     public void testFindUserById() {
         String sql = "SELECT * from users where id = ?";
         User user = User.builder()

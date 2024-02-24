@@ -1,14 +1,21 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
+import com.app.Model.Role;
 import com.app.Model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Arrays;
+import java.util.List;
 
 @Repository
 public class UserDaoImpl implements UserDao {
@@ -22,40 +29,74 @@ public class UserDaoImpl implements UserDao {
 
     @Override
     public User register(User user) {
-        String sql = "INSERT INTO users (username,email,password) VALUES (?,?,?)";
-        int rowsAffected = jdbcTemplate.update(sql,
-                user.getUsername(),
-                user.getEmail(),
-                user.getPassword());
-        if(rowsAffected > 0){
+        String userSql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
+        System.out.println("MySql: "+userSql);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        int rowsAffected = jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(userSql, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, user.getUsername());
+            ps.setString(2, user.getEmail());
+            ps.setString(3, user.getPassword());
+            return ps;
+        }, keyHolder);
+
+        if (rowsAffected > 0) {
+            user.setId(keyHolder.getKey().longValue());
+            Number lastInsertedId = keyHolder.getKey();
+
+            System.out.println(lastInsertedId.longValue());
+
+            String userRoleSql = "INSERT INTO users_roles(user_id,role_id) VALUES (?,?)";
+            System.out.println("MySql: "+userRoleSql);
+            jdbcTemplate.update(userRoleSql,lastInsertedId,2);
+
             return user;
-        }else{
+        } else {
             return null;
         }
     }
 
     @Override
     public User login(String username) {
-        String sql = "SELECT username,password from users where username = ?";
-        return jdbcTemplate.queryForObject(sql,new UserRowMapper());
+        String sql = "SELECT u.id, u.username, u.email, u.password, roles.id as role_id, roles.name as role_name " +
+                "FROM Users u " +
+                "JOIN users_roles ON u.id = users_roles.user_id " +
+                "JOIN roles ON users_roles.role_id = roles.id " +
+                "WHERE u.username = ?";
+        return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
     }
 
     @Override
     public User findUserById(Long id) {
-        String sql = "SELECT * from users where id = ?";
-        return jdbcTemplate.queryForObject(sql,new UserRowMapper(),id);
+        try{
+            String sql = "SELECT id, username, email, password from users where id = ?";
+            return jdbcTemplate.queryForObject(sql,new UserRowMapper(),id);
+        }catch (Exception e){
+            return null;
+        }
     }
 
     @Override
     public User findUserByUsername(String username) {
-        String sql = "SELECT * from users where username =?";
-        return jdbcTemplate.queryForObject(sql,new UserRowMapper(),username);
+        String sql = "SELECT * FROM users WHERE username = ?";
+        List<User> users = jdbcTemplate.query(sql, new UserRowMapper(), username);
+
+        if (!users.isEmpty()) {
+            return users.get(0);
+        } else {
+            return null;
+        }
     }
 
     @Override
     public User findUserByEmail(String email) {
-        String sql = "SELECT * from users where email =?";
-        return jdbcTemplate.queryForObject(sql,new UserRowMapper(),email);
+        try {
+            String sql = "SELECT id, username, email, password from users where email =?";
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), email);
+        }catch (Exception e){
+            return null;
+        }
     }
 }
 
@@ -67,6 +108,12 @@ class UserRowMapper implements RowMapper<User> {
         user.setUsername(rs.getString("username"));
         user.setEmail(rs.getString("email"));
         user.setPassword(rs.getString("password"));
+
+        Role role = new Role();
+        role.setId(rs.getLong("id"));
+        role.setName("name");
+
+        user.setRoles(Arrays.asList(role));
         return user;
     }
 }

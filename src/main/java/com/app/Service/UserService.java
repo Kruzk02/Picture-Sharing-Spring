@@ -4,6 +4,7 @@ import com.app.DAO.Impl.RoleDaoImpl;
 import com.app.DAO.Impl.UserDaoImpl;
 import com.app.DTO.LoginDTO;
 import com.app.DTO.RegisterDTO;
+import com.app.Model.Role;
 import com.app.Model.User;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,8 +38,6 @@ public class UserService {
     public User register(RegisterDTO registerDTO){
         User user = modelMapper.map(registerDTO,User.class);
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
-        user.setRoles(Arrays.asList(roleDao.findByName("ROLE_USER")));
-
         return userDao.register(user);
     }
 

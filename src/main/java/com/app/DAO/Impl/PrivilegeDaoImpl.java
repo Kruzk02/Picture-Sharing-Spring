@@ -28,6 +28,7 @@ public class PrivilegeDaoImpl implements PrivilegeDao {
     @Override
     public void create(Privilege privilege) {
         String sql = "INSERT INTO privileges (name) VALUES (?) ON DUPLICATE KEY UPDATE name = name";
+        System.out.println("MySQL: "+sql);
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {

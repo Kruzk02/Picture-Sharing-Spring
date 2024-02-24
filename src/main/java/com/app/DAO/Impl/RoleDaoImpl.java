@@ -3,9 +3,8 @@ package com.app.DAO.Impl;
 import com.app.DAO.RoleDao;
 import com.app.Model.Role;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -26,8 +25,9 @@ public class RoleDaoImpl implements RoleDao {
     }
 
     @Override
-    public void create(Role role) {
-        String sql = "INSERT INTO roles (name) VALUES (?) ON DUPLICATE KEY UPDATE name = name";
+    public Role create(Role role) {
+        String sql = "INSERT INTO roles (name) VALUES (?)";
+        System.out.println("MySQL: "+sql);
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {
@@ -38,23 +38,28 @@ public class RoleDaoImpl implements RoleDao {
 
         if (rowsAffected > 0) {
             role.setId(keyHolder.getKey().longValue());
+            return role;
+        }else{
+            return null;
         }
     }
 
     @Override
     public Role findByName(String name) {
-        String sql = "SELECT * FROM roles WHERE name =?";
-        return jdbcTemplate.query(sql,new Object[]{name}, new ResultSetExtractor<Role>() {
-            @Override
-            public Role extractData(ResultSet rs) throws SQLException, DataAccessException {
-                if(rs.next()){
-                    Role role = new Role();
-                    role.setId(rs.getLong("id"));
-                    role.setName(rs.getString("name"));
-                    return role;
-                }
-                return null;
-            }
-        });
+        try{
+            String sql = "SELECT * FROM roles WHERE name =?";
+            return jdbcTemplate.queryForObject(sql,new RoleRowMapper(),name);
+        }catch (Exception e){
+            return null;
+        }
+    }
+}
+class RoleRowMapper implements RowMapper<Role> {
+    @Override
+    public Role mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Role role = new Role();
+        role.setId(rs.getLong("id"));
+        role.setName(rs.getString("username"));
+        return role;
     }
 }

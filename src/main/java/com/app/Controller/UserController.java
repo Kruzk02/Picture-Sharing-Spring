@@ -35,9 +35,13 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterDTO registerDTO){
         User existingEmail = userService.findUserByEmail(registerDTO.getEmail());
+        User existingUsername = userService.findUserByUsername(registerDTO.getUsername());
 
         if(existingEmail != null){
             return ResponseEntity.status(400).body("Email is already taken.");
+        }
+        if(existingUsername != null){
+            return ResponseEntity.status(400).body("Username is already taken.");
         }
 
         User user = userService.register(registerDTO);
