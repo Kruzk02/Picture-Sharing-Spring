@@ -12,11 +12,9 @@ import java.util.List;
 @Builder
 public class User {
 
-    @Getter
     private Long id;
     private String username;
     private String email;
-    @Getter
     private String password;
     private List<Role> roles;
 

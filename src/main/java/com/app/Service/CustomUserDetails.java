@@ -22,7 +22,6 @@ public class CustomUserDetails implements UserDetails {
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
                 .collect(Collectors.toList());
-
         return authorities;
     }
 
