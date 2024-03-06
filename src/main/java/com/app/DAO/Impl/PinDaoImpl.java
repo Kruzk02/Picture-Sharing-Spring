@@ -9,6 +9,10 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,8 +25,10 @@ public class PinDaoImpl implements PinDao {
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public PinDaoImpl(JdbcTemplate jdbcTemplate) {
+    public PinDaoImpl(JdbcTemplate jdbcTemplate) throws IOException {
         this.jdbcTemplate = jdbcTemplate;
+
+        createDirectory();
     }
 
     @Override
@@ -38,7 +44,7 @@ public class PinDaoImpl implements PinDao {
     @Override
     public Pin save(Pin pin) {
         try{
-            String sql = "INSERT INTO pins(user_id,file_name,file_data,description) VALUES (?,?,?,?)";
+            String sql = "INSERT INTO pins(user_id,image_url,description) VALUES (?,?,?,?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
             int row = jdbcTemplate.update(con -> {
@@ -76,6 +82,18 @@ public class PinDaoImpl implements PinDao {
             return jdbcTemplate.update(sql,id);
         }catch (Exception e){
             return 0;
+        }
+    }
+
+    public void createDirectory () throws IOException {
+        String fileName = "C:\\media";
+        Path path = Paths.get(fileName);
+
+        if(!Files.exists(path)){
+            Files.createDirectories(path);
+            System.out.println("Directory created");
+        } else {
+            System.out.println("Directory already exists");
         }
     }
 }
