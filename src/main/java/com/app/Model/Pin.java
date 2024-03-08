@@ -12,6 +12,7 @@ public class Pin {
     private Long id;
     private User user;
     private Board board;
+    private String fileName;
     private String image_url;
     private String description;
 }

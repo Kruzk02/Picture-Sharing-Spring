@@ -3,10 +3,18 @@ package com.app.Service;
 import com.app.DAO.Impl.PinDaoImpl;
 import com.app.DTO.PinDTO;
 import com.app.Model.Pin;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 @Service
@@ -25,9 +33,22 @@ public class PinService {
         return pinDao.getAllPins();
     }
 
-    public Pin save(PinDTO pinDTO){
-        Pin pin = modelMapper.map(pinDTO,Pin.class);
-        return pinDao.save(pin);
+    public Pin save(PinDTO pinDTO, MultipartFile multipartFile) throws IOException {
+        Path uploadPath = Paths.get("upload");
+        if(!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+
+        String fileCode = RandomStringUtils.randomAlphabetic(8);
+
+        try (InputStream inputStream = multipartFile.getInputStream()) {
+            Path filePath = uploadPath.resolve(fileCode + "-" + pinDTO.getFileName());
+            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            Pin pin = modelMapper.map(pinDTO,Pin.class);
+            pin.setImage_url(filePath.toString());
+            return pinDao.save(pin);
+        } catch (IOException e) {
+            throw new IOException("Could not save file: " + pinDTO.getFileName(), e);
+        }
     }
 
     public Pin findById(Long id){

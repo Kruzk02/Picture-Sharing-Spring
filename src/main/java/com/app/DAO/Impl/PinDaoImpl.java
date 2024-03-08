@@ -27,8 +27,6 @@ public class PinDaoImpl implements PinDao {
     @Autowired
     public PinDaoImpl(JdbcTemplate jdbcTemplate) throws IOException {
         this.jdbcTemplate = jdbcTemplate;
-
-        createDirectory();
     }
 
     @Override
@@ -44,14 +42,15 @@ public class PinDaoImpl implements PinDao {
     @Override
     public Pin save(Pin pin) {
         try{
-            String sql = "INSERT INTO pins(user_id,image_url,description) VALUES (?,?,?,?)";
+            String sql = "INSERT INTO pins(user_id,,file_name,image_url,description) VALUES (?,?,?,?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
             int row = jdbcTemplate.update(con -> {
                 PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
                 ps.setLong(1,pin.getUser().getId());
-                ps.setString(2,pin.getImage_url());
-                ps.setString(3,pin.getDescription());
+                ps.setString(2,pin.getFileName());
+                ps.setString(3,pin.getImage_url());
+                ps.setString(4,pin.getDescription());
                 return ps;
             },keyHolder);
             if(row > 0){
@@ -82,18 +81,6 @@ public class PinDaoImpl implements PinDao {
             return jdbcTemplate.update(sql,id);
         }catch (Exception e){
             return 0;
-        }
-    }
-
-    public void createDirectory () throws IOException {
-        String fileName = "C:\\media";
-        Path path = Paths.get(fileName);
-
-        if(!Files.exists(path)){
-            Files.createDirectories(path);
-            System.out.println("Directory created");
-        } else {
-            System.out.println("Directory already exists");
         }
     }
 }

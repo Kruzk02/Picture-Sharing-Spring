@@ -13,6 +13,7 @@ import lombok.Setter;
 public class PinDTO {
 
     private User user;
+    private String fileName;
     private String image_url;
     private String description;
 }
