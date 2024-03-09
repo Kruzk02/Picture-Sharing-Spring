@@ -41,8 +41,8 @@ public class PinDaoImpl implements PinDao {
 
     @Override
     public Pin save(Pin pin) {
-        try{
-            String sql = "INSERT INTO pins(user_id,,file_name,image_url,description) VALUES (?,?,?,?)";
+        try {
+            String sql = "INSERT INTO pins(user_id,file_name, image_url, description) VALUES (?,?, ?, ?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
             int row = jdbcTemplate.update(con -> {

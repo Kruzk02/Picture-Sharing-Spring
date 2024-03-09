@@ -1,8 +1,11 @@
 package com.app.Service;
 
 import com.app.DAO.Impl.PinDaoImpl;
+import com.app.DAO.Impl.UserDaoImpl;
 import com.app.DTO.PinDTO;
 import com.app.Model.Pin;
+import com.app.Model.Role;
+import com.app.Model.User;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,17 +18,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
 public class PinService {
 
     private final PinDaoImpl pinDao;
+    private final UserDaoImpl userDao;
     private final ModelMapper modelMapper;
 
     @Autowired
-    public PinService(PinDaoImpl pinDao, ModelMapper modelMapper) {
+    public PinService(PinDaoImpl pinDao, UserDaoImpl userDao, ModelMapper modelMapper) {
         this.pinDao = pinDao;
+        this.userDao = userDao;
         this.modelMapper = modelMapper;
     }
 
@@ -40,14 +46,15 @@ public class PinService {
         String fileCode = RandomStringUtils.randomAlphabetic(8);
 
         try (InputStream inputStream = multipartFile.getInputStream()) {
-            Path filePath = uploadPath.resolve(fileCode + "-" + pinDTO.getFileName());
+            Path filePath = uploadPath.resolve(fileCode);
             Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
 
             Pin pin = modelMapper.map(pinDTO,Pin.class);
             pin.setImage_url(filePath.toString());
+            pin.setFileName(fileCode);
             return pinDao.save(pin);
         } catch (IOException e) {
-            throw new IOException("Could not save file: " + pinDTO.getFileName(), e);
+            throw new IOException("Could not save file: " + fileCode, e);
         }
     }
 

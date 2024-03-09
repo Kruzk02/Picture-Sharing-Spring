@@ -1,12 +1,15 @@
 package com.app.Controller;
 
+import com.app.DTO.PinDTO;
 import com.app.Model.Pin;
 import com.app.Service.PinService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -31,13 +34,18 @@ public class PinController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<?> upload(){
-
+    public ResponseEntity<?> upload(@ModelAttribute PinDTO pinDTO, @RequestParam()MultipartFile file){
+        try{
+            Pin pin = pinService.save(pinDTO,file);
+            return ResponseEntity.status(HttpStatus.CREATED).body(pin);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping("/download/{id}")
     public ResponseEntity<?> download(){
-
+        return null;
     }
 
     @GetMapping("/{id}")
