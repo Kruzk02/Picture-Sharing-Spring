@@ -43,7 +43,7 @@ public class PinService {
         Path uploadPath = Paths.get("upload");
         if(!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
 
-        String fileCode = RandomStringUtils.randomAlphabetic(8);
+        String fileCode = RandomStringUtils.randomAlphabetic(8)+".png";
 
         try (InputStream inputStream = multipartFile.getInputStream()) {
             Path filePath = uploadPath.resolve(fileCode);

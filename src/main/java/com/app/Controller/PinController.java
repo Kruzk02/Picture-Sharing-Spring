@@ -4,12 +4,18 @@ import com.app.DTO.PinDTO;
 import com.app.Model.Pin;
 import com.app.Service.PinService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -44,8 +50,23 @@ public class PinController {
     }
 
     @GetMapping("/download/{id}")
-    public ResponseEntity<?> download(){
-        return null;
+    public ResponseEntity<?> download(@PathVariable Long id){
+        try{
+            Pin pin = pinService.findById(id);
+            Path filePath = Paths.get(pin.getImage_url());
+            InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=" + pin.getFileName()+".png");
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(Files.size(filePath))
+                    .body(resource);
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping("/{id}")
