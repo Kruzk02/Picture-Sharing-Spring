@@ -1,10 +1,8 @@
 package com.app.Service;
 
-import com.app.DAO.Impl.RoleDaoImpl;
 import com.app.DAO.Impl.UserDaoImpl;
 import com.app.DTO.LoginDTO;
 import com.app.DTO.RegisterDTO;
-import com.app.Model.Role;
 import com.app.Model.User;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,20 +13,17 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 
 @Service
 public class UserService {
 
-    private final RoleDaoImpl roleDao;
     private final UserDaoImpl userDao;
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
 
     @Autowired
-    public UserService(RoleDaoImpl roleDao, UserDaoImpl userDao, ModelMapper modelMapper, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager) {
-        this.roleDao = roleDao;
+    public UserService(UserDaoImpl userDao, ModelMapper modelMapper, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager) {
         this.userDao = userDao;
         this.modelMapper = modelMapper;
         this.passwordEncoder = passwordEncoder;
