@@ -12,6 +12,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class PinDTO {
 
-    private Long userId;
+    private User user;
     private String description;
 }

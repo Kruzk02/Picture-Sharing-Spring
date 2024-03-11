@@ -1,8 +1,11 @@
 package com.app.Controller;
 
 import com.app.DTO.PinDTO;
+import com.app.Jwt.JwtProvider;
 import com.app.Model.Pin;
+import com.app.Model.User;
 import com.app.Service.PinService;
+import com.app.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -23,10 +26,14 @@ import java.util.List;
 public class PinController {
 
     private final PinService pinService;
+    private final UserService userService;
+    private final JwtProvider jwtProvider;
 
     @Autowired
-    public PinController(PinService pinService) {
+    public PinController(PinService pinService, UserService userService, JwtProvider jwtProvider) {
         this.pinService = pinService;
+        this.userService = userService;
+        this.jwtProvider = jwtProvider;
     }
 
     @GetMapping
@@ -40,10 +47,26 @@ public class PinController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<?> upload(@ModelAttribute PinDTO pinDTO, @RequestParam()MultipartFile file){
+    public ResponseEntity<?> upload(
+            @ModelAttribute PinDTO pinDTO,
+            @RequestParam("file")MultipartFile file,
+            @RequestHeader("Authorization") String authHeader){
+
         try{
-            Pin pin = pinService.save(pinDTO,file);
-            return ResponseEntity.status(HttpStatus.CREATED).body(pin);
+
+            String token = extractToken(authHeader);
+            if(token != null){
+
+                String username = jwtProvider.extractUsername(token);
+                User user = userService.findUserByUsername(username);
+
+                pinDTO.setUser(user);
+
+                Pin pin = pinService.save(pinDTO,file);
+                return ResponseEntity.status(HttpStatus.CREATED).body(pin);
+            }else{
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization header");
+            }
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -87,5 +110,12 @@ public class PinController {
         }catch (Exception e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    private String extractToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
     }
 }
