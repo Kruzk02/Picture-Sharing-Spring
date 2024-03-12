@@ -34,6 +34,7 @@ public class DatabaseInitializationService {
             executeSqlScript("user.sql");
             executeSqlScript("board.sql");
             executeSqlScript("pin.sql");
+            executeSqlScript("board_pin.sql");
             executeSqlScript("roles.sql");
             executeSqlScript("users_roles.sql");
 
