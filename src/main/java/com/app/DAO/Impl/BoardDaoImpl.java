@@ -2,7 +2,9 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.BoardDao;
 import com.app.Model.Board;
+import com.app.Model.Pin;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -51,7 +53,12 @@ public class BoardDaoImpl implements BoardDao {
     @Override
     public Board findById(Long id) {
         try{
-            String sql = "SELECT * from boards where id = ?";
+            String sql = "SELECT b.id AS board_id, b.board_name, p.id AS pin_id, p.image_url, p.description " +
+                    "FROM boards b " +
+                    "JOIN board_pin bp ON b.id = bp.board_id " +
+                    "JOIN pins p ON bp.pin_id = p.id " +
+                    "WHERE b.id = ?";
+
             return jdbcTemplate.queryForObject(sql,new BoardRowMapper(),id);
         }catch (Exception e){
             return null;
@@ -73,8 +80,19 @@ class BoardRowMapper implements RowMapper<Board>{
     @Override
     public Board mapRow(ResultSet rs, int rowNum) throws SQLException {
         Board board = new Board();
-        board.setId(rs.getLong("id"));
+        board.setId(rs.getLong("board_id"));
         board.setName(rs.getString("board_name"));
+
+        while (rs.next()) {
+            long pinId = rs.getLong("pin_id");
+            if (pinId > 0) {
+                Pin pin = new Pin();
+                pin.setId(pinId);
+                pin.setImage_url(rs.getString("image_url"));
+                pin.setDescription(rs.getString("description"));
+                board.getPins().add(pin);
+            }
+        }
         return board;
     }
 }

@@ -13,5 +13,6 @@ import lombok.Setter;
 public class BoardDTO {
 
     private User user;
+    private Long pin_id;
     private String name;
 }
