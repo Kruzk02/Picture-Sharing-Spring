@@ -9,6 +9,7 @@ import com.app.Model.User;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,6 +36,7 @@ public class PinService {
         this.modelMapper = modelMapper;
     }
 
+    @Cacheable("pins")
     public List<Pin> getAllPins(){
         return pinDao.getAllPins();
     }
@@ -58,6 +60,7 @@ public class PinService {
         }
     }
 
+    @Cacheable("pin")
     public Pin findById(Long id){
         return pinDao.findById(id);
     }

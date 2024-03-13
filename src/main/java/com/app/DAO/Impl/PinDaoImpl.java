@@ -91,6 +91,7 @@ class PinRowMapper implements RowMapper<Pin>{
         Pin pin = new Pin();
         pin.setId(rs.getLong("id"));
         pin.setImage_url(rs.getString("image_url"));
+        pin.setFileName(rs.getString("file_name"));
         pin.setDescription(rs.getString("description"));
         return pin;
     }

@@ -8,6 +8,7 @@ import com.app.Model.Pin;
 import com.app.Model.User;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -33,6 +34,7 @@ public class BoardService {
         return boardDao.save(board);
     }
 
+    @Cacheable("board")
     public Board findById(Long id){
         return boardDao.findById(id);
     }

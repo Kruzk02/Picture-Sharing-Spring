@@ -2,6 +2,7 @@ package com.app.Model;
 
 import lombok.*;
 
+import java.io.Serializable;
 import java.util.List;
 
 @NoArgsConstructor
@@ -9,7 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-public class Pin {
+public class Pin implements Serializable {
 
     private Long id;
     private User user;
