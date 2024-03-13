@@ -31,7 +31,7 @@ public class BoardService {
         Pin pin = pinDao.findById(boardDTO.getPin_id());
         Board board = modelMapper.map(boardDTO,Board.class);
         board.setPins(Arrays.asList(pin));
-        return boardDao.save(board);
+        return boardDao.save(board,pin.getId());
     }
 
     @Cacheable("board")
