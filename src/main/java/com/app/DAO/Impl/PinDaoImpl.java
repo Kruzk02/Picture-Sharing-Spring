@@ -19,6 +19,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
+/**
+ * Implementation of PinDao using Spring JDBC for data access.
+ */
 @Repository
 public class PinDaoImpl implements PinDao {
 
@@ -84,6 +87,10 @@ public class PinDaoImpl implements PinDao {
         }
     }
 }
+
+/**
+ * RowMapper Implementation to map ResultSet row to Pin object.
+ */
 class PinRowMapper implements RowMapper<Pin>{
 
     @Override

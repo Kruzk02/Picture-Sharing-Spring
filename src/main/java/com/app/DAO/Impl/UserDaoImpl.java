@@ -1,7 +1,6 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
-import com.app.Model.Role;
 import com.app.Model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,6 +16,9 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Implementation of UserDao using Spring JDBC for data access.
+ */
 @Repository
 public class UserDaoImpl implements UserDao {
 
@@ -45,10 +47,7 @@ public class UserDaoImpl implements UserDao {
             user.setId(keyHolder.getKey().longValue());
             Number lastInsertedId = keyHolder.getKey();
 
-            System.out.println(lastInsertedId.longValue());
-
             String userRoleSql = "INSERT INTO users_roles(user_id,role_id) VALUES (?,?)";
-            System.out.println("MySql: "+userRoleSql);
             jdbcTemplate.update(userRoleSql,lastInsertedId,2);
 
             return user;
@@ -100,6 +99,9 @@ public class UserDaoImpl implements UserDao {
     }
 }
 
+/**
+ * RowMapper implementation to map ResultSet rows to User object.
+ */
 class UserRowMapper implements RowMapper<User> {
     @Override
     public User mapRow(ResultSet rs, int rowNum) throws SQLException {

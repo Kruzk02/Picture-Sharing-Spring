@@ -3,7 +3,6 @@ package com.app.DAO.Impl;
 import com.app.DAO.BoardDao;
 import com.app.Model.Board;
 import com.app.Model.Pin;
-import com.app.Model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -16,6 +15,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * Implementation of BoardDao using Spring JDBC for data access.
+ */
 @Repository
 public class BoardDaoImpl implements BoardDao {
 
@@ -80,8 +82,10 @@ public class BoardDaoImpl implements BoardDao {
     }
 }
 
+/**
+ * RowMapper Implementation to map ResultSet row to Board object.
+ */
 class BoardRowMapper implements RowMapper<Board>{
-    @Autowired private UserDaoImpl userDao;
     @Override
     public Board mapRow(ResultSet rs, int rowNum) throws SQLException {
         Board board = new Board();

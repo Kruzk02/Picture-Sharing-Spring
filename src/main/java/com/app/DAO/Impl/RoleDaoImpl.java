@@ -14,6 +14,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * Implementation of RoleDao using Spring JDBC Data access.
+ */
 @Repository
 public class RoleDaoImpl implements RoleDao {
 
@@ -54,6 +57,10 @@ public class RoleDaoImpl implements RoleDao {
         }
     }
 }
+
+/**
+ * RowMapper implementation to map ResultSet to Role object.
+ */
 class RoleRowMapper implements RowMapper<Role> {
     @Override
     public Role mapRow(ResultSet rs, int rowNum) throws SQLException {
