@@ -24,11 +24,7 @@ public class CommentService {
     }
 
     public Comment save(CommentDTO commentDTO){
-        Long pinId = commentDTO.getPinId();
-        Pin pin = pinDao.findById(pinId);
-
         Comment comment = modelMapper.map(commentDTO,Comment.class);
-        comment.setPin(pin);
         return commentDao.save(comment);
     }
 
