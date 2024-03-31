@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS comments (
     content TEXT,
     user_id INT,
     pin_id INT,
-    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
     FOREIGN KEY (pin_id) REFERENCES Pins(id) ON DELETE CASCADE
 );
