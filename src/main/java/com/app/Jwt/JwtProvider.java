@@ -1,5 +1,7 @@
 package com.app.Jwt;
 
+import com.app.Model.Board;
+import com.app.Model.Pin;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -19,6 +21,12 @@ public class JwtProvider {
 
     public String generateToken(String username){
         Map<String,Object> claims = new HashMap<>();
+        return createToken(claims,username);
+    }
+
+    public String generateToken(String username,Map<String,Long> id){
+        Map<String,Object> claims = new HashMap<>();
+        id.forEach(claims::put);
         return createToken(claims,username);
     }
 
