@@ -2,6 +2,7 @@ package com.app.Controller;
 
 import com.app.DTO.LoginDTO;
 import com.app.DTO.RegisterDTO;
+import com.app.DTO.UpdateUserDTO;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.User;
 import com.app.Service.UserService;
@@ -68,6 +69,24 @@ public class UserController {
             return ResponseEntity.ok(username);
         }else{
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization header");
+        }
+    }
+
+    @PutMapping("/update-user-information")
+    public ResponseEntity<?> updateUserInformation(@RequestHeader("Authorization") String authHeader, @RequestBody UpdateUserDTO updateUserDTO){
+        String token = extractToken(authHeader);
+
+        if(token != null){
+            String username = jwtProvider.extractUsername(token);
+            User user = userService.findUserByUsername(username);
+
+            user.setUsername(updateUserDTO.getUsername());
+            user.setEmail(updateUserDTO.getEmail());
+            user.setPassword(updateUserDTO.getPassword());
+            userService.update(user);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        }else{
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization Header");
         }
     }
 

@@ -46,4 +46,6 @@ public interface UserDao {
      * @return The user object found, or null if not found
      */
     User findUserByEmail(String email);
+
+    User update(User user);
 }

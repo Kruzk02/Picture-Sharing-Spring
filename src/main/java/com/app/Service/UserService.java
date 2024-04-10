@@ -97,4 +97,9 @@ public class UserService {
     public User findUserByEmail(String email){
         return userDao.findUserByEmail(email);
     }
+
+    public void update(User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userDao.update(user);
+    }
 }
