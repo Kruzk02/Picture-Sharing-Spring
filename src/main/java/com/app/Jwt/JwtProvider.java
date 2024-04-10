@@ -24,9 +24,9 @@ public class JwtProvider {
         return createToken(claims,username);
     }
 
-    public String generateToken(String username,Map<String,Long> id){
+    public String generateToken(String username,Map<String,Object> entity){
         Map<String,Object> claims = new HashMap<>();
-        id.forEach(claims::put);
+        entity.forEach(claims::put);
         return createToken(claims,username);
     }
 

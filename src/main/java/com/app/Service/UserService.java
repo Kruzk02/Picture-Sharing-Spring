@@ -1,6 +1,7 @@
 package com.app.Service;
 
 import com.app.DAO.Impl.UserDaoImpl;
+import com.app.DAO.RoleDao;
 import com.app.DTO.LoginDTO;
 import com.app.DTO.RegisterDTO;
 import com.app.Model.User;
@@ -13,6 +14,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+
 /**
  * User service class responsible for user related operations such as registration, login, and retrieval.<p>
  * This class interacts with the UserDaoImpl for data access and utilizes ModelMapper for mapping between DTOs and entity object.
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserDaoImpl userDao;
+    private final RoleDao roleDao;
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -34,8 +38,9 @@ public class UserService {
      * @param authenticationManager The AuthenticationManager for user authentication.
      */
     @Autowired
-    public UserService(UserDaoImpl userDao, ModelMapper modelMapper, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager) {
+    public UserService(UserDaoImpl userDao, RoleDao roleDao, ModelMapper modelMapper, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager) {
         this.userDao = userDao;
+        this.roleDao = roleDao;
         this.modelMapper = modelMapper;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -51,6 +56,7 @@ public class UserService {
     public User register(RegisterDTO registerDTO){
         User user = modelMapper.map(registerDTO,User.class);
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
+        user.setRoles(Arrays.asList(roleDao.findByName("USER")));
         return userDao.register(user);
     }
 
