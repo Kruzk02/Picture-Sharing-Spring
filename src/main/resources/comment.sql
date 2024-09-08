@@ -3,6 +3,6 @@ CREATE TABLE IF NOT EXISTS comments (
     content TEXT,
     user_id INT,
     pin_id INT,
-    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
-    FOREIGN KEY (pin_id) REFERENCES Pins(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (pin_id) REFERENCES pins(id) ON DELETE CASCADE
 );

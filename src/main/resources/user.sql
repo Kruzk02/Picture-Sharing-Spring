@@ -1,7 +1,7 @@
-create table if not exists  Users (
-	id int auto_increment primary key,
-    username varchar(255) not null,
-    email varchar(255) not null unique,
-    password varchar(255) not null,
-    create_at timestamp default current_timestamp
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
