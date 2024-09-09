@@ -2,7 +2,10 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
 import com.app.Model.User;
+import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -13,14 +16,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Objects;
 
-/**
- * Implementation of UserDao using Spring JDBC for data access.
- */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
+
 @Repository
 public class UserDaoImpl implements UserDao {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserDaoImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -29,10 +34,10 @@ public class UserDaoImpl implements UserDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @Transactional
     @Override
     public User register(User user) {
         String userSql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
-        System.out.println("MySql: "+userSql);
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {
@@ -44,11 +49,21 @@ public class UserDaoImpl implements UserDao {
         }, keyHolder);
 
         if (rowsAffected > 0) {
-            user.setId(keyHolder.getKey().longValue());
-            Number lastInsertedId = keyHolder.getKey();
+            user.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
 
-            String userRoleSql = "INSERT INTO users_roles(user_id,role_id) VALUES (?,?)";
-            jdbcTemplate.update(userRoleSql,lastInsertedId,2);
+            String userRoleSql = "INSERT INTO users_roles (user_id, role_id) VALUES (?, ?)";
+            jdbcTemplate.batchUpdate(userRoleSql, new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    ps.setLong(1, user.getId());
+                    ps.setInt(2, 2);
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return 1;
+                }
+            });
 
             return user;
         } else {
@@ -58,32 +73,38 @@ public class UserDaoImpl implements UserDao {
 
     @Override
     public User login(String username) {
-        String sql = "SELECT u.id, u.username, u.email, u.password, roles.id as role_id, roles.name as role_name " +
-                "FROM Users u " +
-                "JOIN users_roles ON u.id = users_roles.user_id " +
-                "JOIN roles ON users_roles.role_id = roles.id " +
-                "WHERE u.username = ?";
-        return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
+        try {
+            String sql = "SELECT u.id, u.username, u.email, u.password, roles.id as role_id, roles.name as role_name " +
+                    "FROM users u " +
+                    "JOIN users_roles ON u.id = users_roles.user_id " +
+                    "JOIN roles ON users_roles.role_id = roles.id " +
+                    "WHERE u.username = ?";
+
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
+        } catch (EmptyResultDataAccessException e) {
+            logger.warn("User not found with username: {}", username);
+            throw new UserNotFoundException("User not found with username: " + username);
+        }
     }
 
     @Override
     public User findUserById(Long id) {
-        try{
-            String sql = "SELECT id, username, email, password from users where id = ?";
-            return jdbcTemplate.queryForObject(sql,new UserRowMapper(),id);
-        }catch (Exception e){
-            return null;
+        try {
+            String sql = "SELECT id, username, email, password FROM users WHERE id = ?";
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), id);
+        } catch (EmptyResultDataAccessException e) {
+            logger.warn("User not found with id: {}", id);
+            throw new UserNotFoundException("User not found with id: " + id);
         }
     }
 
     @Override
     public User findUserByUsername(String username) {
-        String sql = "SELECT * FROM users WHERE username = ?";
-        List<User> users = jdbcTemplate.query(sql, new UserRowMapper(), username);
-
-        if (!users.isEmpty()) {
-            return users.get(0);
-        } else {
+        try {
+            String sql = "SELECT * FROM users WHERE username = ?";
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
+        } catch (EmptyResultDataAccessException e) {
+            logger.warn("User not found with username: {}", username);
             return null;
         }
     }
@@ -91,27 +112,26 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findUserByEmail(String email) {
         try {
-            String sql = "SELECT id, username, email, password from users where email =?";
+            String sql = "SELECT id, username, email, password FROM users WHERE email = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), email);
-        }catch (Exception e){
+        } catch (EmptyResultDataAccessException e) {
+            logger.warn("User not found with email: {}", email);
             return null;
         }
     }
 
     @Override
     public User update(User user) {
-        try {
-            String sql = "Update user set user.username , user.email , user.password where id = ?";
-            return jdbcTemplate.queryForObject(sql,new UserRowMapper(),user.getId());
-        }catch (Exception e){
+        String sql = "UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?";
+        int rowsAffected = jdbcTemplate.update(sql, user.getUsername(), user.getEmail(), user.getPassword(), user.getId());
+        if (rowsAffected > 0) {
+            return findUserById(user.getId());
+        } else {
             return null;
         }
     }
 }
 
-/**
- * RowMapper implementation to map ResultSet rows to User object.
- */
 class UserRowMapper implements RowMapper<User> {
     @Override
     public User mapRow(ResultSet rs, int rowNum) throws SQLException {
