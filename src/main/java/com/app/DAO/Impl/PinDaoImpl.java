@@ -10,9 +10,6 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -70,7 +67,7 @@ public class PinDaoImpl implements PinDao {
     @Override
     public Pin findById(Long id) {
         try{
-            String sql = "SELECT * FROM pins where id = ?";
+            String sql = "SELECT id, file_name, image_url, description FROM pins where id = ?";
             return jdbcTemplate.queryForObject(sql,new PinRowMapper(),id);
         }catch (Exception e){
             return null;

@@ -7,7 +7,9 @@ import com.app.Model.User;
 import com.app.Service.PinService;
 import com.app.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -60,9 +62,7 @@ public class PinController {
                 String username = jwtProvider.extractUsername(token);
                 User user = userService.findUserByUsername(username);
 
-                pinDTO.setUser(user);
-
-                Pin pin = pinService.save(pinDTO,file);
+                Pin pin = pinService.save(user,pinDTO,file);
                 return ResponseEntity.status(HttpStatus.CREATED).body(pin);
             }else{
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization header");
@@ -73,21 +73,21 @@ public class PinController {
     }
 
     @GetMapping("/download/{id}")
-    public ResponseEntity<?> download(@PathVariable Long id){
-        try{
+    public ResponseEntity<?> download(@PathVariable Long id) {
+        try {
             Pin pin = pinService.findById(id);
             Path filePath = Paths.get(pin.getImage_url());
             InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
 
             HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=" + pin.getFileName()+".png");
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pin.getFileName() + ".png");
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
             return ResponseEntity.ok()
                     .headers(headers)
                     .contentLength(Files.size(filePath))
                     .body(resource);
-        }catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -98,6 +98,27 @@ public class PinController {
             Pin pin = pinService.findById(id);
             return ResponseEntity.ok(pin);
         }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @GetMapping("/{id}/photo")
+    public ResponseEntity<Resource> getPhotoByPinId(@PathVariable Long id) {
+        try {
+            Pin pin = pinService.findById(id);
+            Path filePath = Paths.get("upload/" + pin.getFileName());
+
+            String mimeType = Files.probeContentType(filePath);
+            if (mimeType == null) {
+                mimeType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+            }
+
+            Resource resource = new FileSystemResource(filePath);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(mimeType))
+                    .body(resource);
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }

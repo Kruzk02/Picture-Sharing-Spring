@@ -11,7 +11,5 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PinDTO {
-
-    private User user;
     private String description;
 }

@@ -3,6 +3,7 @@ package com.app.Service;
 import com.app.DAO.Impl.PinDaoImpl;
 import com.app.DTO.PinDTO;
 import com.app.Model.Pin;
+import com.app.Model.User;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +47,7 @@ public class PinService {
      *
      * @return A List of all pins.
      */
-    @Cacheable("pins")
+
     public List<Pin> getAllPins(){
         return pinDao.getAllPins();
     }
@@ -60,7 +61,7 @@ public class PinService {
      * @return The saved Pin entity.
      * @throws IOException If an I/O error occurs while saving the file.
      */
-    public Pin save(PinDTO pinDTO, MultipartFile multipartFile) throws IOException {
+    public Pin save(User user, PinDTO pinDTO, MultipartFile multipartFile) throws IOException {
         Path uploadPath = Paths.get("upload");
         if(!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
 
@@ -73,6 +74,7 @@ public class PinService {
             Pin pin = modelMapper.map(pinDTO,Pin.class);
             pin.setImage_url(filePath.toString());
             pin.setFileName(fileCode);
+            pin.setUser(user);
             return pinDao.save(pin);
         } catch (IOException e) {
             throw new IOException("Could not save file: " + fileCode, e);
@@ -85,7 +87,7 @@ public class PinService {
      * @param id The ID of the pin to retrieve.
      * @return The Pin entity corresponding to the provided ID.
      */
-    @Cacheable("pin")
+
     public Pin findById(Long id){
         return pinDao.findById(id);
     }
@@ -95,9 +97,10 @@ public class PinService {
      *
      * @param id The ID of the pin to delete.
      */
-    public void deleteById(Long id){
+    public void deleteById(Long id) throws IOException {
         Pin pin = pinDao.findById(id);
         if(pin != null){
+            Files.deleteIfExists(Path.of(pin.getImage_url()));
             pinDao.deleteById(id);
         }
     }
