@@ -27,37 +27,29 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO){
-        try {
-            User user = userService.login(loginDTO);
+    public ResponseEntity<String> login(@RequestBody LoginDTO loginDTO){
+        User user = userService.login(loginDTO);
 
-            String token = jwtProvider.generateToken(loginDTO.getUsername());
-            Map<String,String> response = new HashMap<>();
-            response.put("token",token);
-            return ResponseEntity.status(200).body(response);
-        }catch (Exception e) {
-            return ResponseEntity.status(401).body("Invalid Username or password.");
-        }
+        String token = jwtProvider.generateToken(user.getUsername());
+        return ResponseEntity.status(200).body(token);
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterDTO registerDTO){
-        try{
-            User existingEmail = userService.findUserByEmail(registerDTO.getEmail());
-            User existingUsername = userService.findUserByUsername(registerDTO.getUsername());
+    public ResponseEntity<String> register(@RequestBody RegisterDTO registerDTO){
 
-            if(existingEmail != null){
-                return ResponseEntity.status(400).body("Email is already taken.");
-            }
-            if(existingUsername != null){
-                return ResponseEntity.status(400).body("Username is already taken.");
-            }
+        User existingEmail = userService.findUserByEmail(registerDTO.getEmail());
+        User existingUsername = userService.findUserByUsername(registerDTO.getUsername());
 
-            User user = userService.register(registerDTO);
-            return ResponseEntity.status(200).body(user);
-        }catch (Exception e){
-            return ResponseEntity.status(400).body("Email or Username is already taken.");
+        if(existingEmail != null){
+            return ResponseEntity.status(400).body("Email is already taken.");
         }
+
+        if(existingUsername != null){
+            return ResponseEntity.status(400).body("Username is already taken.");
+        }
+
+        userService.register(registerDTO);
+        return ResponseEntity.status(200).body("successfully registered");
     }
 
     @GetMapping("/get-username")
