@@ -28,43 +28,31 @@ public class BoardController {
 
     @PostMapping("/create")
     public ResponseEntity<?> create(@RequestBody BoardDTO boardDTO,@RequestHeader("Authorization") String authHeader){
-        try{
-            String token = extractToken(authHeader);
+        String token = extractToken(authHeader);
 
-            if(token != null){
-                String username = jwtProvider.extractUsername(token);
-                User user = userService.findUserByUsername(username);
+        if(token != null){
+            String username = jwtProvider.extractUsername(token);
+            User user = userService.findUserByUsername(username);
 
-                boardDTO.setUser(user);
+            boardDTO.setUser(user);
 
-                Board board = boardService.save(boardDTO);
-                return ResponseEntity.status(HttpStatus.CREATED).body(board);
-            }else{
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization header");
-            }
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            Board board = boardService.save(boardDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(board);
+        }else{
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization header");
         }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> findById(@PathVariable Long id){
-        try {
-            Board board = boardService.findById(id);
-            return ResponseEntity.status(HttpStatus.OK).body(board);
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+        Board board = boardService.findById(id);
+        return ResponseEntity.status(HttpStatus.OK).body(board);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteById(@PathVariable Long id){
-        try {
-            boardService.deleteById(id);
-            return ResponseEntity.status(HttpStatus.OK).build();
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+        boardService.deleteById(id);
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
     private String extractToken(String authHeader) {
