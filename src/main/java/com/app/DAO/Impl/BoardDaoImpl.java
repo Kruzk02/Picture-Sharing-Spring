@@ -1,8 +1,12 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.BoardDao;
+import com.app.DAO.PinDao;
+import com.app.DAO.UserDao;
 import com.app.Model.Board;
 import com.app.Model.Pin;
+import com.app.Model.User;
+import com.app.exception.sub.BoardNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -22,10 +26,13 @@ import java.sql.Statement;
 public class BoardDaoImpl implements BoardDao {
 
     private final JdbcTemplate jdbcTemplate;
-
+    private final UserDao userDao;
+    private final PinDao pinDao;
     @Autowired
-    public BoardDaoImpl(JdbcTemplate jdbcTemplate) {
+    public BoardDaoImpl(JdbcTemplate jdbcTemplate, UserDao userDao, PinDao pinDao) {
         this.jdbcTemplate = jdbcTemplate;
+        this.userDao = userDao;
+        this.pinDao = pinDao;
     }
 
     @Override
@@ -65,9 +72,9 @@ public class BoardDaoImpl implements BoardDao {
                     "JOIN pins p ON bp.pin_id = p.id " +
                     "WHERE b.id = ?";
 
-            return jdbcTemplate.queryForObject(sql,new BoardRowMapper(),id);
+            return jdbcTemplate.queryForObject(sql,new BoardRowMapper(pinDao,userDao),id);
         }catch (Exception e){
-            return null;
+            throw new BoardNotFoundException("Board not found with a id: " + id);
         }
     }
 
@@ -86,6 +93,14 @@ public class BoardDaoImpl implements BoardDao {
  * RowMapper Implementation to map ResultSet row to Board object.
  */
 class BoardRowMapper implements RowMapper<Board>{
+    private final PinDao pinDao;
+    private final UserDao userDao;
+
+    public BoardRowMapper(PinDao pinDao, UserDao userDao) {
+        this.pinDao = pinDao;
+        this.userDao = userDao;
+    }
+
     @Override
     public Board mapRow(ResultSet rs, int rowNum) throws SQLException {
         Board board = new Board();
@@ -94,12 +109,11 @@ class BoardRowMapper implements RowMapper<Board>{
 
         long pinId = rs.getLong("pin_id");
         if (pinId > 0) {
-            Pin pin = new Pin();
-            pin.setId(pinId);
-            pin.setImage_url(rs.getString("image_url"));
-            pin.setDescription(rs.getString("description"));
+            Pin pin = pinDao.findById(pinId);
             board.getPins().add(pin);
         }
+        User user = userDao.findUserById(rs.getLong("user_id"));
+        board.setUser(user);
         return board;
     }
 }
