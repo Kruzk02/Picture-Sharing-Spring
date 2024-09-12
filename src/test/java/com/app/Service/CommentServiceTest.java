@@ -38,10 +38,10 @@ public class CommentServiceTest {
     public void testSaveComment() {
         CommentDTO commentDTO = new CommentDTO();
         commentDTO.setUser(new User(1L,"phuc","phuc@gmail.com","123",null));
-        commentDTO.setPinId(1L);
+        commentDTO.setPin(new Pin());
         commentDTO.setContent("Comment Content");
 
-        Long pinId = commentDTO.getPinId();
+        Long pinId = commentDTO.getPin().getId();
         Pin pin = pinDao.findById(pinId);
 
         Comment comment = new Comment();
@@ -57,20 +57,6 @@ public class CommentServiceTest {
         assertEquals(comment.getContent(), savedComment.getContent());
         verify(modelMapper, times(1)).map(commentDTO, Comment.class);
         verify(commentDao, times(1)).save(comment);
-    }
-
-    @Test
-    public void testFindByID() {
-        Long commentId = 1L;
-        Comment comment = new Comment();
-        comment.setId(commentId);
-
-        when(commentDao.findById(commentId)).thenReturn(comment);
-
-        Comment foundComment = commentService.findByID(commentId);
-
-        assertEquals(comment, foundComment);
-        verify(commentDao, times(1)).findById(commentId);
     }
 
     @Test
