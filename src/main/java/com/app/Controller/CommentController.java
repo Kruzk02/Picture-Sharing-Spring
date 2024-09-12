@@ -42,24 +42,10 @@ public class CommentController {
         return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Comment> find(@PathVariable Long id){
-        try{
-            Comment comment = commentService.findByID(id);
-            return ResponseEntity.status(HttpStatus.OK).body(comment);
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id){
-        try{
-            commentService.deleteById(id);
-            return ResponseEntity.status(HttpStatus.OK).build();
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+        commentService.deleteById(id);
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
     private String extractToken(String authHeader){
