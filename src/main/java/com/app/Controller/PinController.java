@@ -2,6 +2,7 @@ package com.app.Controller;
 
 import com.app.DTO.PinDTO;
 import com.app.Jwt.JwtProvider;
+import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.User;
 import com.app.Service.PinService;
@@ -100,6 +101,12 @@ public class PinController {
         }catch (Exception e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    @GetMapping("/{id}/comment")
+    public ResponseEntity<List<Comment>> getAllCommentByPinId(@PathVariable Long id){
+        List<Comment> comments = pinService.getAllCommentByPinId(id);
+        return ResponseEntity.ok(comments);
     }
 
     @GetMapping("/{id}/photo")
