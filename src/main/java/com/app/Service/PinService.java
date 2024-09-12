@@ -1,13 +1,14 @@
 package com.app.Service;
 
-import com.app.DAO.Impl.PinDaoImpl;
+import com.app.DAO.CommentDao;
+import com.app.DAO.PinDao;
 import com.app.DTO.PinDTO;
+import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.User;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,7 +28,8 @@ import java.util.List;
 @Service
 public class PinService {
 
-    private final PinDaoImpl pinDao;
+    private final PinDao pinDao;
+    private final CommentDao commentDao;
     private final ModelMapper modelMapper;
 
     /**
@@ -37,8 +39,9 @@ public class PinService {
      * @param modelMapper The ModelMapper for entity-DTO mapping.
      */
     @Autowired
-    public PinService(PinDaoImpl pinDao, ModelMapper modelMapper) {
+    public PinService(PinDao pinDao, CommentDao commentDao, ModelMapper modelMapper) {
         this.pinDao = pinDao;
+        this.commentDao = commentDao;
         this.modelMapper = modelMapper;
     }
 
@@ -50,6 +53,10 @@ public class PinService {
 
     public List<Pin> getAllPins(){
         return pinDao.getAllPins();
+    }
+
+    public List<Comment> getAllCommentByPinId(Long pinId){
+        return commentDao.findByPinId(pinId);
     }
 
     /**
