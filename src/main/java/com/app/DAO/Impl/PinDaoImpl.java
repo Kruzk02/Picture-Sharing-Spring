@@ -2,14 +2,15 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.PinDao;
 import com.app.Model.Pin;
+import com.app.exception.sub.PinNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,18 +26,14 @@ public class PinDaoImpl implements PinDao {
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public PinDaoImpl(JdbcTemplate jdbcTemplate) throws IOException {
+    public PinDaoImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public List<Pin> getAllPins() {
-        try{
-            String sql = "SELECT * FROM pins";
-            return jdbcTemplate.query(sql,new PinRowMapper());
-        }catch (Exception e){
-            return null;
-        }
+        String sql = "SELECT * FROM pins";
+        return jdbcTemplate.query(sql,new PinRowMapper());
     }
 
     @Override
@@ -69,8 +66,8 @@ public class PinDaoImpl implements PinDao {
         try{
             String sql = "SELECT id, file_name, image_url, description FROM pins where id = ?";
             return jdbcTemplate.queryForObject(sql,new PinRowMapper(),id);
-        }catch (Exception e){
-            return null;
+        }catch (DataAccessException e){
+           throw new PinNotFoundException("Pin not found with a id: " + id);
         }
     }
 
@@ -79,8 +76,8 @@ public class PinDaoImpl implements PinDao {
         try{
             String sql = "DELETE FROM pins WHERE id = ?";
             return jdbcTemplate.update(sql,id);
-        }catch (Exception e){
-            return 0;
+        }catch (DataAccessException e){
+            throw new PinNotFoundException("Pin not found with a id: " + id);
         }
     }
 }
