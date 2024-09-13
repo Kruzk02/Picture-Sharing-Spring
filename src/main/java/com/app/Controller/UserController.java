@@ -9,6 +9,8 @@ import com.app.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -54,38 +56,22 @@ public class UserController {
 
     @GetMapping("/get-username")
     public ResponseEntity<String> getUsernameFromToken(@RequestHeader("Authorization") String authHeader){
-        String token = extractToken(authHeader);
-
-        if(token != null){
-            String username = jwtProvider.extractUsername(token);
-            return ResponseEntity.ok(username);
-        }else{
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization header");
-        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        return ResponseEntity.ok(username);
     }
 
     @PutMapping("/update-user-information")
     public ResponseEntity<?> updateUserInformation(@RequestHeader("Authorization") String authHeader, @RequestBody UpdateUserDTO updateUserDTO){
-        String token = extractToken(authHeader);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        User user = userService.findUserByUsername(username);
 
-        if(token != null){
-            String username = jwtProvider.extractUsername(token);
-            User user = userService.findUserByUsername(username);
-
-            user.setUsername(updateUserDTO.getUsername());
-            user.setEmail(updateUserDTO.getEmail());
-            user.setPassword(updateUserDTO.getPassword());
-            userService.update(user);
-            return ResponseEntity.status(HttpStatus.OK).build();
-        }else{
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization Header");
-        }
+        user.setUsername(updateUserDTO.getUsername());
+        user.setEmail(updateUserDTO.getEmail());
+        user.setPassword(updateUserDTO.getPassword());
+        userService.update(user);
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
-    private String extractToken(String authHeader) {
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
-        }
-        return null;
-    }
 }

@@ -9,6 +9,8 @@ import com.app.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,41 +19,27 @@ public class CommentController {
 
     private final CommentService commentService;
     private final UserService userService;
-    private final JwtProvider jwtProvider;
 
     @Autowired
-    public CommentController(CommentService commentService, UserService userService, JwtProvider jwtProvider) {
+    public CommentController(CommentService commentService, UserService userService) {
         this.commentService = commentService;
         this.userService = userService;
-        this.jwtProvider = jwtProvider;
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Comment> create(@RequestBody CommentDTO commentDTO, @RequestHeader("Authorization") String authHeader){
-        String token = extractToken(authHeader);
+    public ResponseEntity<Comment> create(@RequestBody CommentDTO commentDTO){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = userService.findUserByUsername(authentication.getName());
 
-        if(token != null){
-            String username = jwtProvider.extractUsername(token);
-            User user = userService.findUserByUsername(username);
+        commentDTO.setUser(user);
 
-            commentDTO.setUser(user);
-
-            Comment comment = commentService.save(commentDTO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(comment);
-        }
-        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        Comment comment = commentService.save(commentDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(comment);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id){
         commentService.deleteById(id);
         return ResponseEntity.status(HttpStatus.OK).build();
-    }
-
-    private String extractToken(String authHeader){
-        if(authHeader != null && authHeader.startsWith("Bearer ")){
-            return authHeader.substring(7);
-        }
-        return null;
     }
 }

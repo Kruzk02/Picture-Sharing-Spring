@@ -1,7 +1,6 @@
 package com.app.Controller;
 
 import com.app.DTO.PinDTO;
-import com.app.Jwt.JwtProvider;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.User;
@@ -15,6 +14,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,73 +31,46 @@ public class PinController {
 
     private final PinService pinService;
     private final UserService userService;
-    private final JwtProvider jwtProvider;
 
     @Autowired
-    public PinController(PinService pinService, UserService userService, JwtProvider jwtProvider) {
+    public PinController(PinService pinService, UserService userService) {
         this.pinService = pinService;
         this.userService = userService;
-        this.jwtProvider = jwtProvider;
     }
 
     @GetMapping
     public ResponseEntity<List<Pin>> getAllPins(){
-        try {
-            List<Pin> pins = pinService.getAllPins();
-            return ResponseEntity.ok(pins);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.ok(pinService.getAllPins());
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<?> upload(
-            @ModelAttribute PinDTO pinDTO,
-            @RequestParam("file")MultipartFile file,
-            @RequestHeader("Authorization") String authHeader){
+    public ResponseEntity<Pin> upload(@ModelAttribute PinDTO pinDTO, @RequestParam("file")MultipartFile file) throws IOException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = userService.findUserByUsername(authentication.getName());
 
-        try{
-
-            String token = extractToken(authHeader);
-            if(token != null){
-
-                String username = jwtProvider.extractUsername(token);
-                User user = userService.findUserByUsername(username);
-
-                Pin pin = pinService.save(user,pinDTO,file);
-                return ResponseEntity.status(HttpStatus.CREATED).body(pin);
-            }else{
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Authorization header");
-            }
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        Pin pin = pinService.save(user,pinDTO,file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(pin);
     }
 
     @GetMapping("/download/{id}")
-    public ResponseEntity<?> download(@PathVariable Long id) {
-        try {
-            Pin pin = pinService.findById(id);
-            Path filePath = Paths.get(pin.getImage_url());
-            InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
+    public ResponseEntity<InputStreamResource> download(@PathVariable Long id) throws IOException {
+        Pin pin = pinService.findById(id);
+        Path filePath = Paths.get(pin.getImage_url());
+        InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pin.getFileName() + ".png");
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pin.getFileName() + ".png");
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .contentLength(Files.size(filePath))
-                    .body(resource);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentLength(Files.size(filePath))
+                .body(resource);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPinById(@PathVariable Long id){
-        Pin pin = pinService.findById(id);
-        return ResponseEntity.ok(pin);
+    public ResponseEntity<Pin> getPinById(@PathVariable Long id){
+        return ResponseEntity.ok(pinService.findById(id));
     }
 
     @GetMapping("/{id}/comment")
@@ -123,19 +97,9 @@ public class PinController {
     }
 
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deletePinById(@PathVariable Long id){
-        try{
-            pinService.deleteById(id);
-            return ResponseEntity.ok().build();
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+    public ResponseEntity<?> deletePinById(@PathVariable Long id) throws IOException {
+        pinService.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 
-    private String extractToken(String authHeader) {
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
-        }
-        return null;
-    }
 }
