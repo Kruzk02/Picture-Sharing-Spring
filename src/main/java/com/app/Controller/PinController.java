@@ -95,12 +95,8 @@ public class PinController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getPinById(@PathVariable Long id){
-        try{
-            Pin pin = pinService.findById(id);
-            return ResponseEntity.ok(pin);
-        }catch (Exception e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+        Pin pin = pinService.findById(id);
+        return ResponseEntity.ok(pin);
     }
 
     @GetMapping("/{id}/comment")
@@ -110,24 +106,20 @@ public class PinController {
     }
 
     @GetMapping("/{id}/photo")
-    public ResponseEntity<Resource> getPhotoByPinId(@PathVariable Long id) {
-        try {
-            Pin pin = pinService.findById(id);
-            Path filePath = Paths.get("upload/" + pin.getFileName());
+    public ResponseEntity<Resource> getPhotoByPinId(@PathVariable Long id) throws IOException {
+        Pin pin = pinService.findById(id);
+        Path filePath = Paths.get("upload/" + pin.getFileName());
 
-            String mimeType = Files.probeContentType(filePath);
-            if (mimeType == null) {
-                mimeType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
-            }
-
-            Resource resource = new FileSystemResource(filePath);
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(mimeType))
-                    .body(resource);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        String mimeType = Files.probeContentType(filePath);
+        if (mimeType == null) {
+            mimeType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
+
+        Resource resource = new FileSystemResource(filePath);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(mimeType))
+                .body(resource);
     }
 
     @DeleteMapping("/delete/{id}")
