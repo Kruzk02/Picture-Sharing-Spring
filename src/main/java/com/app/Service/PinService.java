@@ -9,6 +9,7 @@ import com.app.Model.User;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -31,6 +33,7 @@ public class PinService {
     private final PinDao pinDao;
     private final CommentDao commentDao;
     private final ModelMapper modelMapper;
+    private final RedisTemplate<Object,Object> redisTemplate;
 
     /**
      * Constructs a new PinService.
@@ -39,10 +42,11 @@ public class PinService {
      * @param modelMapper The ModelMapper for entity-DTO mapping.
      */
     @Autowired
-    public PinService(PinDao pinDao, CommentDao commentDao, ModelMapper modelMapper) {
+    public PinService(PinDao pinDao, CommentDao commentDao, ModelMapper modelMapper, RedisTemplate<Object, Object> redisTemplate) {
         this.pinDao = pinDao;
         this.commentDao = commentDao;
         this.modelMapper = modelMapper;
+        this.redisTemplate = redisTemplate;
     }
 
     /**
@@ -52,11 +56,25 @@ public class PinService {
      */
 
     public List<Pin> getAllPins(){
-        return pinDao.getAllPins();
+        List<Pin> pins = pinDao.getAllPins();
+        pins.forEach(pin -> {
+            Pin cachePin = (Pin) redisTemplate.opsForValue().get("pin:" + pin.getId());
+            if (cachePin == null) {
+                redisTemplate.opsForValue().set("pin:" + pin.getId(), pin, Duration.ofHours(2));
+            }
+        });
+        return pins;
     }
 
     public List<Comment> getAllCommentByPinId(Long pinId){
-        return commentDao.findByPinId(pinId);
+        List<Comment> comments = commentDao.findByPinId(pinId);
+        comments.forEach(comment -> {
+            Comment cacheComment = (Comment) redisTemplate.opsForValue().get("comment:" + comment.getId());
+            if (cacheComment == null) {
+                redisTemplate.opsForValue().set("comment:" + comment.getId(),comment,Duration.ofHours(2));
+            }
+        });
+        return comments;
     }
 
     /**
@@ -96,7 +114,14 @@ public class PinService {
      */
 
     public Pin findById(Long id){
-        return pinDao.findById(id);
+        Pin cachePin = (Pin) redisTemplate.opsForValue().get("pin:" + id);
+        if (cachePin != null) return cachePin;
+
+        Pin pin = pinDao.findById(id);
+        if (pin != null) {
+            redisTemplate.opsForValue().set("pin:" + id,pin,Duration.ofHours(2));
+        }
+        return pin;
     }
 
     /**
