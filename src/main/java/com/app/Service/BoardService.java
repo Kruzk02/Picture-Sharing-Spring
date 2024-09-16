@@ -9,8 +9,10 @@ import com.app.Model.User;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Arrays;
 
 /**
@@ -24,6 +26,7 @@ public class BoardService {
     private final BoardDaoImpl boardDao;
     private final PinDaoImpl pinDao;
     private final ModelMapper modelMapper;
+    private final RedisTemplate<Object,Object> redisTemplate;
 
     /**
      * Constructs a new BoardService.
@@ -33,10 +36,11 @@ public class BoardService {
      * @param modelMapper The ModelMapper for entity-DTO mapping.
      */
     @Autowired
-    public BoardService(BoardDaoImpl boardDao, PinDaoImpl pinDao, ModelMapper modelMapper) {
+    public BoardService(BoardDaoImpl boardDao, PinDaoImpl pinDao, ModelMapper modelMapper, RedisTemplate<Object, Object> redisTemplate) {
         this.boardDao = boardDao;
         this.pinDao = pinDao;
         this.modelMapper = modelMapper;
+        this.redisTemplate = redisTemplate;
     }
 
     /**
@@ -64,7 +68,14 @@ public class BoardService {
      */
     @Cacheable("board")
     public Board findById(Long id){
-        return boardDao.findById(id);
+        Board cacheBoard = (Board) redisTemplate.opsForValue().get("board:" + id);
+        if (cacheBoard != null) return cacheBoard;
+
+        Board board = boardDao.findById(id);
+        if (board != null) {
+            redisTemplate.opsForValue().set("board:" + board.getId(),board, Duration.ofHours(2));
+        }
+        return board;
     }
 
     /**
