@@ -10,6 +10,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +22,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Pin Service class responsible for handling operations relates to Pins.<p>
@@ -49,6 +51,16 @@ public class PinService {
         this.redisTemplate = redisTemplate;
     }
 
+    @Async
+    public CompletableFuture<Pin> asyncData(User user, PinDTO pinDTO, MultipartFile multipartFile) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return save(user, pinDTO, multipartFile);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to save data", e);
+            }
+        });
+    }
     /**
      * Retrieves all pins.
      *
