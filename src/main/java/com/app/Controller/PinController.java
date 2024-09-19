@@ -24,6 +24,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/pin")
@@ -44,12 +46,11 @@ public class PinController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<Pin> upload(@ModelAttribute PinDTO pinDTO, @RequestParam("file")MultipartFile file) throws IOException {
+    public ResponseEntity<Pin> upload(@ModelAttribute PinDTO pinDTO, @RequestParam("file")MultipartFile file) throws ExecutionException, InterruptedException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.findUserByUsername(authentication.getName());
 
-        Pin pin = pinService.save(user,pinDTO,file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(pin);
+        return ResponseEntity.status(HttpStatus.CREATED).body( pinService.asyncData(user,pinDTO,file).get());
     }
 
     @GetMapping("/download/{id}")
