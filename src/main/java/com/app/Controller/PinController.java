@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -41,8 +40,10 @@ public class PinController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Pin>> getAllPins(){
-        return ResponseEntity.ok(pinService.getAllPins());
+    public ResponseEntity<List<Pin>> getAllPins(
+            @RequestParam(value = "offset", defaultValue = "0") int offset) {
+        List<Pin> pins = pinService.getAllPins(offset);
+        return ResponseEntity.ok(pins);
     }
 
     @PostMapping("/upload")
@@ -99,7 +100,9 @@ public class PinController {
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deletePinById(@PathVariable Long id) throws IOException {
-        pinService.deleteById(id);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = userService.findUserByUsername(authentication.getName());
+        pinService.deleteById(user,id);
         return ResponseEntity.ok().build();
     }
 
