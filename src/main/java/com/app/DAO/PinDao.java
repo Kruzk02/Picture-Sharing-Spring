@@ -13,7 +13,7 @@ public interface PinDao {
      *
      * @return A list of all pins stored in the database.
      */
-    List<Pin> getAllPins();
+    List<Pin> getAllPins(int offset);
 
     /**
      * Saves a pin object into the database.
@@ -30,6 +30,13 @@ public interface PinDao {
      * @return The pin object if found, otherwise null.
      */
     Pin findById(Long id);
+
+    /**
+     * Find a user id by pin id
+     * @param pinId the id of the pin
+     * @return The user object if found, otherwise throw PinNotFoundException
+     */
+    Pin findUserIdByPinId(Long pinId);
 
     /**
      * Deletes a pin from the database by its id.
