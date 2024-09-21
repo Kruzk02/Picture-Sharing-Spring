@@ -1,15 +1,13 @@
 package com.app.exception;
 
-import com.app.exception.sub.BoardNotFoundException;
-import com.app.exception.sub.CommentNotFoundException;
-import com.app.exception.sub.PinNotFoundException;
-import com.app.exception.sub.UserNotFoundException;
+import com.app.exception.sub.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.io.FileNotFoundException;
 import java.time.LocalDateTime;
 
 @ControllerAdvice
@@ -39,4 +37,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(FileNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleFileNotFoundException(FileNotFoundException ex) {
+        ErrorResponse response = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(UserNotMatchException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotMatchException(UserNotMatchException ex) {
+        ErrorResponse response = new ErrorResponse(ex.getMessage(), HttpStatus.FORBIDDEN.value(), LocalDateTime.now());
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
 }
