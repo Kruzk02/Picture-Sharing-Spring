@@ -6,6 +6,7 @@ import com.app.DTO.PinDTO;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.User;
+import com.app.exception.sub.UserNotMatchException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -22,7 +24,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * Pin Service class responsible for handling operations relates to Pins.<p>
@@ -67,25 +71,33 @@ public class PinService {
      * @return A List of all pins.
      */
 
-    public List<Pin> getAllPins(){
-        List<Pin> pins = pinDao.getAllPins();
-        pins.forEach(pin -> {
-            Pin cachePin = (Pin) redisTemplate.opsForValue().get("pin:" + pin.getId());
-            if (cachePin == null) {
-                redisTemplate.opsForValue().set("pin:" + pin.getId(), pin, Duration.ofHours(2));
+    public List<Pin> getAllPins(int offset){
+        List<Pin> pins = pinDao.getAllPins(offset);
+        List<Object> cacheKeys = pins.stream()
+                .map(pin -> "pins:" + pin.getId())
+                .collect(Collectors.toList());
+        List<Object> cachePins = redisTemplate.opsForValue().multiGet(cacheKeys);
+
+        for (int i = 0; i < Objects.requireNonNull(cachePins).size(); i++) {
+            if (cachePins.get(i) == null) {
+                redisTemplate.opsForValue().set("pins:" + pins.get(i).getId(),pins.get(i),Duration.ofHours(2));
             }
-        });
+        }
         return pins;
     }
 
     public List<Comment> getAllCommentByPinId(Long pinId){
         List<Comment> comments = commentDao.findByPinId(pinId);
-        comments.forEach(comment -> {
-            Comment cacheComment = (Comment) redisTemplate.opsForValue().get("comment:" + comment.getId());
-            if (cacheComment == null) {
-                redisTemplate.opsForValue().set("comment:" + comment.getId(),comment,Duration.ofHours(2));
+        List<Object> cacheKeys = comments.stream()
+                .map(comment -> "comments:" + comment.getId())
+                .collect(Collectors.toList());
+        List<Object> cacheComment = redisTemplate.opsForValue().multiGet(cacheKeys);
+
+        for (int i = 0;i < Objects.requireNonNull(cacheComment).size();i++) {
+            if (cacheComment.get(i) == null) {
+                redisTemplate.opsForValue().set("comments:" + comments.get(i).getId(),comments.get(i),Duration.ofHours(2));
             }
-        });
+        }
         return comments;
     }
 
@@ -111,7 +123,7 @@ public class PinService {
             Pin pin = modelMapper.map(pinDTO,Pin.class);
             pin.setImage_url(filePath.toString());
             pin.setFileName(fileCode);
-            pin.setUser(user);
+            pin.setUserId(user.getId());
             return pinDao.save(pin);
         } catch (IOException e) {
             throw new IOException("Could not save file: " + fileCode, e);
@@ -126,8 +138,9 @@ public class PinService {
      */
 
     public Pin findById(Long id){
-        Pin cachePin = (Pin) redisTemplate.opsForValue().get("pin:" + id);
-        if (cachePin != null) return cachePin;
+        Pin cachePin = (Pin) redisTemplate.opsForValue().get("pins:" + id);
+        if (cachePin != null && cachePin.getFileName() != null && cachePin.getDescription() != null)
+            return cachePin;
 
         Pin pin = pinDao.findById(id);
         if (pin != null) {
@@ -141,11 +154,18 @@ public class PinService {
      *
      * @param id The ID of the pin to delete.
      */
-    public void deleteById(Long id) throws IOException {
-        Pin pin = pinDao.findById(id);
-        if(pin != null){
-            Files.deleteIfExists(Path.of(pin.getImage_url()));
+    public void deleteById(User user,Long id) throws IOException {
+        Pin pin = pinDao.findUserIdByPinId(id);
+        if(pin != null && Objects.equals(user.getId(),pin.getUserId())){
+            Path path = Path.of(pin.getImage_url());
+            if (Files.exists(path)) Files.delete(path);
+            else throw new FileNotFoundException("File not found with a pin id: " + pin.getId());
+
+            redisTemplate.opsForValue().getAndDelete("pin:" + id);
+            redisTemplate.opsForValue().getAndDelete("pins:" + id);
             pinDao.deleteById(id);
+        } else if (pin != null && !Objects.equals(user.getId(), pin.getUserId())) {
+            throw new UserNotMatchException("User not matching with a pin");
         }
     }
 }
