@@ -13,9 +13,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @RequestMapping("/api")
 @RestController
 public class UserController {
@@ -55,14 +52,14 @@ public class UserController {
     }
 
     @GetMapping("/get-username")
-    public ResponseEntity<String> getUsernameFromToken(@RequestHeader("Authorization") String authHeader){
+    public ResponseEntity<String> getUsernameFromToken(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         return ResponseEntity.ok(username);
     }
 
     @PutMapping("/update-user-information")
-    public ResponseEntity<?> updateUserInformation(@RequestHeader("Authorization") String authHeader, @RequestBody UpdateUserDTO updateUserDTO){
+    public ResponseEntity<?> updateUserInformation( @RequestBody UpdateUserDTO updateUserDTO){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         User user = userService.findUserByUsername(username);
