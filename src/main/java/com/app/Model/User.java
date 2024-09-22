@@ -2,6 +2,7 @@ package com.app.Model;
 
 import lombok.*;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,7 +11,7 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-public class User {
+public class User implements Serializable {
 
     private Long id;
     private String username;
