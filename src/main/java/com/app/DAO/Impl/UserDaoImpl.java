@@ -4,6 +4,7 @@ import com.app.DAO.UserDao;
 import com.app.Model.User;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,14 +19,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Objects;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class UserDaoImpl implements UserDao {
-
-    private static final Logger logger = LoggerFactory.getLogger(UserDaoImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -82,7 +79,6 @@ public class UserDaoImpl implements UserDao {
 
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
         } catch (EmptyResultDataAccessException e) {
-            logger.warn("User not found with username: {}", username);
             throw new UserNotFoundException("User not found with username: " + username);
         }
     }
@@ -90,10 +86,9 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findUserById(Long id) {
         try {
-            String sql = "SELECT id, username, email, password FROM users WHERE id = ?";
+            String sql = "SELECT id, username, email FROM users WHERE id = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), id);
         } catch (EmptyResultDataAccessException e) {
-            logger.warn("User not found with id: {}", id);
             throw new UserNotFoundException("User not found with id: " + id);
         }
     }
@@ -101,22 +96,35 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findUserByUsername(String username) {
         try {
-            String sql = "SELECT * FROM users WHERE username = ?";
+            String sql = "SELECT id, username, email FROM users WHERE username = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
         } catch (EmptyResultDataAccessException e) {
-            logger.warn("User not found with username: {}", username);
-            return null;
+            throw new UserNotFoundException("User not found with a username: " + username);
         }
     }
 
     @Override
     public User findUserByEmail(String email) {
         try {
-            String sql = "SELECT id, username, email, password FROM users WHERE email = ?";
+            String sql = "SELECT id, username, email FROM users WHERE email = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), email);
         } catch (EmptyResultDataAccessException e) {
-            logger.warn("User not found with email: {}", email);
-            return null;
+            throw new UserNotFoundException("User not found with a email: " + email);
+        }
+    }
+
+    @Override
+    public User findPasswordByUsername(String username) {
+        try {
+            String sql = "SELECT username,password FROM users WHERE username = ?";
+            return jdbcTemplate.queryForObject(sql,(rs, rowNum) -> {
+                User user = new User();
+                user.setUsername(rs.getString("username"));
+                user.setPassword(rs.getString("password"));
+                return user;
+            },username);
+        }catch (DataAccessException e) {
+            throw new UserNotFoundException("User not found with a username: " + username);
         }
     }
 
@@ -139,7 +147,6 @@ class UserRowMapper implements RowMapper<User> {
         user.setId(rs.getLong("id"));
         user.setUsername(rs.getString("username"));
         user.setEmail(rs.getString("email"));
-        user.setPassword(rs.getString("password"));
         return user;
     }
 }

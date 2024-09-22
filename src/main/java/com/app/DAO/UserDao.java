@@ -47,5 +47,6 @@ public interface UserDao {
      */
     User findUserByEmail(String email);
 
+    User findPasswordByUsername(String username);
     User update(User user);
 }
