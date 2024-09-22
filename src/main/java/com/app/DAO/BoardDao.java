@@ -2,6 +2,8 @@ package com.app.DAO;
 
 import com.app.Model.Board;
 
+import java.util.List;
+
 /**
  * Interface for managing Board data access operations.
  */
@@ -24,6 +26,12 @@ public interface BoardDao {
      */
     Board findById(Long id);
 
+    /**
+     * Find all board by user id
+     * @param userId the user id of the board to be found
+     * @return a list of board
+     */
+    List<Board> findAllByUserId(Long userId);
     /**
      * Deletes a board from the database by its id.
      *

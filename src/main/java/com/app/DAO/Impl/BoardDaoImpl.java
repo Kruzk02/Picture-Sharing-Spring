@@ -4,8 +4,6 @@ import com.app.DAO.BoardDao;
 import com.app.DAO.PinDao;
 import com.app.DAO.UserDao;
 import com.app.Model.Board;
-import com.app.Model.Pin;
-import com.app.Model.User;
 import com.app.exception.sub.BoardNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,6 +16,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 /**
  * Implementation of BoardDao using Spring JDBC for data access.
@@ -52,7 +51,7 @@ public class BoardDaoImpl implements BoardDao {
                 board.setId(keyHolder.getKey().longValue());
                 Number lastInsertedId = keyHolder.getKey();
 
-                String boardPinSql = "INSERT INTO Board_Pin (board_id,pin_id) VALUES (?,?)";
+                String boardPinSql = "INSERT INTO board_pin (board_id,pin_id) VALUES (?,?)";
                 jdbcTemplate.update(boardPinSql,lastInsertedId,pinId);
                 return board;
             }else{
@@ -66,7 +65,7 @@ public class BoardDaoImpl implements BoardDao {
     @Override
     public Board findById(Long id) {
         try{
-            String sql = "SELECT b.id AS board_id, b.board_name, p.id AS pin_id, p.file_name, p.image_url, p.description " +
+            String sql = "SELECT b.id AS board_id, b.board_name,b.user_id, p.id AS pin_id, p.file_name, p.image_url, p.description " +
                     "FROM boards b " +
                     "JOIN board_pin bp ON b.id = bp.board_id " +
                     "JOIN pins p ON bp.pin_id = p.id " +
@@ -74,8 +73,21 @@ public class BoardDaoImpl implements BoardDao {
 
             return jdbcTemplate.queryForObject(sql,new BoardRowMapper(pinDao,userDao),id);
         }catch (Exception e){
+            System.out.println(e.getCause() + e.getMessage());
             throw new BoardNotFoundException("Board not found with a id: " + id);
         }
+    }
+
+    @Override
+    public List<Board> findAllByUserId(Long userId) {
+        String sql = "SELECT * from boards WHERE user_id = ?";
+        return jdbcTemplate.query(sql,(rs, rowNum) -> {
+            Board board = new Board();
+            board.setId(rs.getLong("id"));
+            board.setName(rs.getString("board_name"));
+            board.setUser(userDao.findUserById(rs.getLong("user_id")));
+            return board;
+        },userId);
     }
 
     @Override
@@ -84,7 +96,7 @@ public class BoardDaoImpl implements BoardDao {
             String sql = "DELETE FROM boards WHERE id = ?";
             return jdbcTemplate.update(sql,id);
         }catch (Exception e){
-            return 0;
+           throw new BoardNotFoundException("Board not found with id:" + id);
         }
     }
 }
@@ -106,14 +118,8 @@ class BoardRowMapper implements RowMapper<Board>{
         Board board = new Board();
         board.setId(rs.getLong("board_id"));
         board.setName(rs.getString("board_name"));
-
-        long pinId = rs.getLong("pin_id");
-        if (pinId > 0) {
-            Pin pin = pinDao.findById(pinId);
-            board.getPins().add(pin);
-        }
-        User user = userDao.findUserById(rs.getLong("user_id"));
-        board.setUser(user);
+        board.setPins(List.of(pinDao.findById(rs.getLong("pin_id"))));
+        board.setUser(userDao.findUserById(rs.getLong("user_id")));
         return board;
     }
 }
