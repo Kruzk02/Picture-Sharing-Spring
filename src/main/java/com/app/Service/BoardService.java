@@ -6,6 +6,7 @@ import com.app.DTO.BoardDTO;
 import com.app.Model.Board;
 import com.app.Model.Pin;
 import com.app.Model.User;
+import com.app.exception.sub.UserNotMatchException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Board Service class responsible for handling operations related to boards.<p>
@@ -66,7 +70,7 @@ public class BoardService {
      * @param id The ID of the board to retrieve.
      * @return The Board entity corresponding to the provided ID.
      */
-    @Cacheable("board")
+
     public Board findById(Long id){
         Board cacheBoard = (Board) redisTemplate.opsForValue().get("board:" + id);
         if (cacheBoard != null) return cacheBoard;
@@ -78,15 +82,32 @@ public class BoardService {
         return board;
     }
 
+    public List<Board> findAllByUserId(Long userId) {
+        List<Board> boards = boardDao.findAllByUserId(userId);
+        List<Object> cacheKeys = boards.stream()
+                .map(board -> "board:" + board.getId())
+                .collect(Collectors.toList());
+        List<Object> cacheBoards = redisTemplate.opsForValue().multiGet(cacheKeys);
+
+        for (int i = 0; i < Objects.requireNonNull(cacheBoards).size(); i++) {
+            if (cacheBoards.get(i) == null) {
+                redisTemplate.opsForValue().set("board:" + boards.get(i).getId(),boards.get(i),Duration.ofHours(2));
+            }
+        }
+        return boards;
+    }
+
     /**
      * Deletes a board by its ID, if it exists.
      *
      * @param id The ID of the board to delete.
      */
-    public void deleteById(Long id){
+    public void deleteById(User user,Long id){
         Board board = boardDao.findById(id);
-        if(board != null){
+        if(board != null && Objects.equals(board.getUser().getId(), user.getId())){
             boardDao.deleteById(id);
+        } else {
+            throw new UserNotMatchException("User not matching with board");
         }
     }
 }
