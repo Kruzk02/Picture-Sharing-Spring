@@ -48,4 +48,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ErrorResponse response = new ErrorResponse(ex.getMessage(), HttpStatus.FORBIDDEN.value(), LocalDateTime.now());
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
+
+    @ExceptionHandler(SubCommentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleSubCommentNotFoundException(SubCommentNotFoundException e) {
+        ErrorResponse response = new ErrorResponse(e.getMessage(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
+        return new ResponseEntity<>(response,HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(SaveDataFailedException.class)
+    public ResponseEntity<ErrorResponse> handleSaveDataFieldException(SaveDataFailedException e) {
+        ErrorResponse response = new ErrorResponse(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now());
+        return new ResponseEntity<>(response,HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }
