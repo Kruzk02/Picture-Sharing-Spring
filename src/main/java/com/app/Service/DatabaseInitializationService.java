@@ -38,6 +38,7 @@ public class DatabaseInitializationService {
             executeSqlScript("roles.sql");
             executeSqlScript("users_roles.sql");
             executeSqlScript("comment.sql");
+            executeSqlScript("sub_comment.sql");
 
             Role adminRole = createRoleIfNotFound("ADMIN");
             Role userRole = createRoleIfNotFound("USER");
