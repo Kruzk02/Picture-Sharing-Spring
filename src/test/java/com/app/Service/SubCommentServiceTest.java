@@ -73,7 +73,22 @@ class SubCommentServiceTest {
     void testSaveSubComment() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         SubCommentDTO subCommentDTO = new SubCommentDTO();
-        subCommentDTO.setCommentId(1L);
+        subCommentDTO.setComment(Comment.builder()
+                .id(1L)
+                .content("HELLO WORLD")
+                .user(User.builder()
+                        .id(1L)
+                        .username("test")
+                        .email("test@gmail.com")
+                        .password("test")
+                        .build())
+                .pin(Pin.builder()
+                        .id(1L)
+                        .description("NOPE")
+                        .fileName("YES")
+                        .image_url("/upload")
+                        .userId(1L)
+                        .build()).build());
         subCommentDTO.setContent("WELL");
 
         when(modelMapper.map(subCommentDTO, SubComment.class)).thenReturn(subComment);
