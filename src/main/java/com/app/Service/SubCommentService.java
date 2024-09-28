@@ -3,6 +3,8 @@ package com.app.Service;
 import com.app.DAO.SubCommentDao;
 import com.app.DTO.SubCommentDTO;
 import com.app.Model.SubComment;
+import com.app.Model.User;
+import com.app.exception.sub.UserNotMatchException;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,10 +60,12 @@ public class SubCommentService {
         return subComment;
     }
 
-    public void deleteById(Long id) {
+    public void deleteIfUserMatches(User user,Long id) {
         SubComment subComment = subCommentDao.findById(id);
-        if (subComment != null) {
+        if (subComment != null && Objects.equals(user.getId(),subComment.getUser().getId())) {
             subCommentDao.deleteById(subComment.getId());
+        } else {
+            throw new UserNotMatchException("User does not match with sub-comment owner");
         }
     }
 }

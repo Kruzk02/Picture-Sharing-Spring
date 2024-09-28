@@ -48,7 +48,9 @@ public class SubCommentController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBySubCommentId(@PathVariable Long subCommentId) {
-        subCommentService.deleteById(subCommentId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = userService.findUserByUsername(authentication.getName());
+        subCommentService.deleteIfUserMatches(user,subCommentId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }
