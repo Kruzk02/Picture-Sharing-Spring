@@ -150,11 +150,11 @@ public class PinService {
     }
 
     /**
-     * Deletes a Pin by its ID, if it exists.
+     * Deletes a Pin by its ID if user id match with pin.
      *
      * @param id The ID of the pin to delete.
      */
-    public void deleteById(User user,Long id) throws IOException {
+    public void deleteIfUserMatches(User user,Long id) throws IOException {
         Pin pin = pinDao.findUserIdByPinId(id);
         if(pin != null && Objects.equals(user.getId(),pin.getUserId())){
             Path path = Path.of(pin.getImage_url());
@@ -165,7 +165,7 @@ public class PinService {
             redisTemplate.opsForValue().getAndDelete("pins:" + id);
             pinDao.deleteById(id);
         } else if (pin != null && !Objects.equals(user.getId(), pin.getUserId())) {
-            throw new UserNotMatchException("User not matching with a pin");
+            throw new UserNotMatchException("User does not match with a pin owner");
         }
     }
 }

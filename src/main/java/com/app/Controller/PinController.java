@@ -102,7 +102,7 @@ public class PinController {
     public ResponseEntity<?> deletePinById(@PathVariable Long id) throws IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.findUserByUsername(authentication.getName());
-        pinService.deleteById(user,id);
+        pinService.deleteIfUserMatches(user,id);
         return ResponseEntity.ok().build();
     }
 
