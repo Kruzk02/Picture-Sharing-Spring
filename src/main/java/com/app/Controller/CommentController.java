@@ -39,7 +39,9 @@ public class CommentController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id){
-        commentService.deleteById(id);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = userService.findUserByUsername(authentication.getName());
+        commentService.deleteIfUserMatches(user,id);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
