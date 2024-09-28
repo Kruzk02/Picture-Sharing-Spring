@@ -58,7 +58,7 @@ public class BoardController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.findUserByUsername(authentication.getName());
 
-        boardService.deleteById(user,id);
+        boardService.deleteIfUserMatches(user,id);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 

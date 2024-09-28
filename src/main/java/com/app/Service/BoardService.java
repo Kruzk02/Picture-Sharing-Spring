@@ -98,16 +98,16 @@ public class BoardService {
     }
 
     /**
-     * Deletes a board by its ID, if it exists.
+     * Deletes a board by its ID if user id match with board.
      *
      * @param id The ID of the board to delete.
      */
-    public void deleteById(User user,Long id){
+    public void deleteIfUserMatches(User user,Long id){
         Board board = boardDao.findById(id);
         if(board != null && Objects.equals(board.getUser().getId(), user.getId())){
             boardDao.deleteById(id);
         } else {
-            throw new UserNotMatchException("User not matching with board");
+            throw new UserNotMatchException("User does not matching with board owner");
         }
     }
 }
