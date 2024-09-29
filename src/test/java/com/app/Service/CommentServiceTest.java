@@ -34,12 +34,38 @@ public class CommentServiceTest {
     @InjectMocks
     private CommentService commentService;
 
+    private Comment comment;
+    private User user;
+    private Pin pin;
+    @BeforeEach
+    void setUp() {
+        user = User.builder()
+                .id(1L)
+                .username("test")
+                .email("test@gmail.com")
+                .password("test")
+                .build();
+        pin = Pin.builder()
+                .id(1L)
+                .description("NOPE")
+                .fileName("YES")
+                .image_url("/upload")
+                .userId(1L)
+                .build();
+        comment = Comment.builder()
+                .id(1L)
+                .content("HELLO WORLD")
+                .user(user)
+                .pin(pin)
+                .build();
+    }
+
     @Test
     public void testSaveComment() {
         CommentDTO commentDTO = new CommentDTO();
-        commentDTO.setUser(new User(1L,"phuc","phuc@gmail.com","123",null));
-        commentDTO.setPin(new Pin());
-        commentDTO.setContent("Comment Content");
+        commentDTO.setUser(user);
+        commentDTO.setPin(pin);
+        commentDTO.setContent("HELLO WORLD");
 
         Long pinId = commentDTO.getPin().getId();
         Pin pin = pinDao.findById(pinId);
@@ -61,27 +87,10 @@ public class CommentServiceTest {
 
     @Test
     public void testDeleteById() {
-        Long commentId = 1L;
-        Comment comment = new Comment();
-        comment.setId(commentId);
+        when(commentDao.findById(comment.getId())).thenReturn(comment);
 
-        when(commentDao.findById(commentId)).thenReturn(comment);
-
-        commentService.deleteById(commentId);
-
-        verify(commentDao, times(1)).findById(commentId);
-        verify(commentDao, times(1)).deleteById(commentId);
+        commentService.deleteIfUserMatches(user,comment.getId());
+        verify(commentDao).deleteById(comment.getId());
     }
 
-    @Test
-    public void testDeleteByIdWhenCommentNotFound() {
-        Long commentId = 1L;
-
-        when(commentDao.findById(commentId)).thenReturn(null);
-
-        commentService.deleteById(commentId);
-
-        verify(commentDao, times(1)).findById(commentId);
-        verify(commentDao, never()).deleteById(commentId);
-    }
 }

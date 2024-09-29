@@ -36,21 +36,24 @@ class SubCommentServiceTest {
     @InjectMocks private SubCommentService subCommentService;
 
     private SubComment subComment;
+    private User user;
 
     @BeforeEach
     void setUp() {
+        user = User.builder()
+                .id(1L)
+                .username("test")
+                .email("test@gmail.com")
+                .password("test")
+                .build();
+
         subComment = SubComment.builder()
                 .id(1L)
                 .content("OK")
                 .comment(Comment.builder()
                         .id(1L)
                         .content("HELLO WORLD")
-                        .user(User.builder()
-                                .id(1L)
-                                .username("test")
-                                .email("test@gmail.com")
-                                .password("test")
-                                .build())
+                        .user(user)
                         .pin(Pin.builder()
                                 .id(1L)
                                 .description("NOPE")
@@ -126,7 +129,7 @@ class SubCommentServiceTest {
     @Test
     void deleteById() {
         when(subCommentDao.findById(subComment.getId())).thenReturn(subComment);
-        subCommentService.deleteById(subComment.getId());
+        subCommentService.deleteIfUserMatches(user,subComment.getId());
         verify(subCommentDao).deleteById(subComment.getId());
     }
 }
