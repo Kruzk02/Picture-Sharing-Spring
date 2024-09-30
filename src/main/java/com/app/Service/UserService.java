@@ -2,6 +2,7 @@ package com.app.Service;
 
 import com.app.DAO.Impl.UserDaoImpl;
 import com.app.DAO.RoleDao;
+import com.app.DAO.UserDao;
 import com.app.DTO.LoginDTO;
 import com.app.DTO.RegisterDTO;
 import com.app.Model.User;
@@ -23,7 +24,7 @@ import java.util.Arrays;
 @Service
 public class UserService {
 
-    private final UserDaoImpl userDao;
+    private final UserDao userDao;
     private final RoleDao roleDao;
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
@@ -38,7 +39,7 @@ public class UserService {
      * @param authenticationManager The AuthenticationManager for user authentication.
      */
     @Autowired
-    public UserService(UserDaoImpl userDao, RoleDao roleDao, ModelMapper modelMapper, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager) {
+    public UserService(UserDao userDao, RoleDao roleDao, ModelMapper modelMapper, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager) {
         this.userDao = userDao;
         this.roleDao = roleDao;
         this.modelMapper = modelMapper;
@@ -56,7 +57,7 @@ public class UserService {
     public User register(RegisterDTO registerDTO){
         User user = modelMapper.map(registerDTO,User.class);
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
-        user.setRoles(Arrays.asList(roleDao.findByName("USER")));
+        user.setRoles(Arrays.asList(roleDao.findByName("ROLE_USER")));
         return userDao.register(user);
     }
 
