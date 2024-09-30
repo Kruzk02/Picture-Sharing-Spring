@@ -1,5 +1,7 @@
 package com.app.DAO.Impl;
 
+import com.app.Model.Privilege;
+import com.app.Model.Role;
 import com.app.Model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,10 +11,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
+import java.sql.ResultSet;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,6 +43,10 @@ public class UserDaoImplTest {
                 .username("test")
                 .email("test@gmail.com")
                 .password("test")
+                .roles(List.of(Role.builder()
+                        .id(1L)
+                        .name("ROLE_USER")
+                        .build()))
                 .build();
     }
 
@@ -98,14 +107,33 @@ public class UserDaoImplTest {
 
     @Test
     void testFindPasswordByUsername() {
-        String sql = "SELECT username,password FROM users WHERE username = ?";
+        String sql = "SELECT u.id AS user_id, u.username AS user_username, u.password AS user_password, r.id AS role_id, r.name AS role_name " +
+                "FROM users u " +
+                "JOIN users_roles ur ON ur.user_id = u.id " +
+                "JOIN roles r ON ur.role_id = r.id " +
+                "WHERE u.username = ?";
         String username = "test";
 
-        when(jdbcTemplate.queryForObject(eq(sql),any(RowMapper.class),eq(username))).thenReturn(user);
+        when(jdbcTemplate.query(eq(sql),any(ResultSetExtractor.class),eq(username))).thenAnswer(invocation -> {
+            ResultSet rs = mock(ResultSet.class);
+            when(rs.next()).thenReturn(true,false);
+            when(rs.getLong("user_id")).thenReturn(1L);
+            when(rs.getString("user_username")).thenReturn("test");
+            when(rs.getString("user_password")).thenReturn("test");
+            when(rs.getLong("role_id")).thenReturn(1L);
+            when(rs.getString("role_name")).thenReturn("ROLE_USER");
 
-        userDao.findPasswordByUsername(username);
+            ResultSetExtractor<User> extractor = invocation.getArgument(1);
+            return extractor.extractData(rs);
+        });
 
-        verify(jdbcTemplate).queryForObject(eq(sql),any(RowMapper.class),eq(user.getUsername()));
+        User result = userDao.findPasswordNRoleByUsername(username);
+
+        assertNotNull(result);
+        assertEquals(result.getId(),user.getId());
+        assertEquals(result.getUsername(),user.getUsername());
+        assertEquals(result.getRoles().size(),user.getRoles().size());
+        verify(jdbcTemplate).query(eq(sql),any(ResultSetExtractor.class),eq(user.getUsername()));
     }
 
     @Test

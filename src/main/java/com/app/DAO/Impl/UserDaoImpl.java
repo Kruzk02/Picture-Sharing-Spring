@@ -1,6 +1,7 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
+import com.app.Model.Role;
 import com.app.Model.User;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Objects;
+import java.util.*;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,7 +80,7 @@ public class UserDaoImpl implements UserDao {
 
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
         } catch (EmptyResultDataAccessException e) {
-            throw new UserNotFoundException("User not found with username: " + username);
+            return null;
         }
     }
 
@@ -99,7 +100,7 @@ public class UserDaoImpl implements UserDao {
             String sql = "SELECT id, username, email FROM users WHERE username = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
         } catch (EmptyResultDataAccessException e) {
-            throw new UserNotFoundException("User not found with a username: " + username);
+            return null;
         }
     }
 
@@ -109,24 +110,51 @@ public class UserDaoImpl implements UserDao {
             String sql = "SELECT id, username, email FROM users WHERE email = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(), email);
         } catch (EmptyResultDataAccessException e) {
-            throw new UserNotFoundException("User not found with a email: " + email);
+            return null;
         }
     }
 
     @Override
-    public User findPasswordByUsername(String username) {
+    public User findPasswordNRoleByUsername(String username) {
         try {
-            String sql = "SELECT username,password FROM users WHERE username = ?";
-            return jdbcTemplate.queryForObject(sql,(rs, rowNum) -> {
-                User user = new User();
-                user.setUsername(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
+            String sql = "SELECT u.id AS user_id, u.username AS user_username, u.password AS user_password, r.id AS role_id, r.name AS role_name " +
+                    "FROM users u " +
+                    "JOIN users_roles ur ON ur.user_id = u.id " +
+                    "JOIN roles r ON ur.role_id = r.id " +
+                    "WHERE u.username = ?";
+
+            return jdbcTemplate.query(sql, rs -> {
+                User user = null;
+                List<Role> roles = new ArrayList<>();
+
+                while (rs.next()) {
+                    if (user == null) {
+                        user = new User();
+                        user.setId(rs.getLong("user_id"));
+                        user.setUsername(rs.getString("user_username"));
+                        user.setPassword(rs.getString("user_password"));
+                    }
+
+                    Role role = new Role();
+                    role.setId(rs.getLong("role_id"));
+                    role.setName(rs.getString("role_name"));
+                    roles.add(role);
+                }
+
+                if (user != null) {
+                    user.setRoles(roles);
+                }
+
                 return user;
-            },username);
-        }catch (DataAccessException e) {
+            }, username);
+
+        } catch (EmptyResultDataAccessException e) {
             throw new UserNotFoundException("User not found with a username: " + username);
+        } catch (DataAccessException e) {
+            throw new RuntimeException("An error occurred while accessing the database", e);
         }
     }
+
 
     @Override
     public User update(User user) {
