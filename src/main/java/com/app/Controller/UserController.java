@@ -8,11 +8,18 @@ import com.app.Model.User;
 import com.app.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 @RequestMapping("/api")
 @RestController
@@ -27,29 +34,43 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginDTO loginDTO){
+    public ResponseEntity<Map<String,String>> login(@RequestBody LoginDTO loginDTO){
         User user = userService.login(loginDTO);
+        Map<String,String> response = new HashMap<>();
 
         String token = jwtProvider.generateToken(user.getUsername());
-        return ResponseEntity.status(200).body(token);
+        response.put("status","ok");
+        response.put("token",token);
+        response.put("timestamp", String.valueOf(LocalDateTime.now()));
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(response);
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody RegisterDTO registerDTO){
-
+    public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterDTO registerDTO) {
         User existingEmail = userService.findUserByEmail(registerDTO.getEmail());
         User existingUsername = userService.findUserByUsername(registerDTO.getUsername());
 
-        if(existingEmail != null){
-            return ResponseEntity.status(400).body("Email is already taken.");
+        Map<String, Object> response = new HashMap<>();
+
+        if (existingEmail != null) {
+            response.put("status", "error");
+            response.put("message", "Email is already taken.");
+            response.put("timestamp", String.valueOf(LocalDateTime.now()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
-        if(existingUsername != null){
-            return ResponseEntity.status(400).body("Username is already taken.");
+        if (existingUsername != null) {
+            response.put("status", "error");
+            response.put("message", "Username is already taken.");
+            response.put("timestamp", String.valueOf(LocalDateTime.now()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         userService.register(registerDTO);
-        return ResponseEntity.status(200).body("successfully registered");
+        response.put("status", "ok");
+        response.put("message", "successfully registered");
+        response.put("timestamp", String.valueOf(LocalDateTime.now()));
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(response);
     }
 
     @GetMapping("/get-username")
