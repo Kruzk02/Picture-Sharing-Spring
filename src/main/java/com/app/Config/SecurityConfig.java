@@ -47,6 +47,7 @@ public class SecurityConfig {
                                         "api/register",
                                         "api/pin"
                                 ).permitAll()
+                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling(e -> e.accessDeniedHandler(accessDeniedHandler)
