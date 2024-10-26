@@ -6,6 +6,13 @@ import com.app.Model.Pin;
 import com.app.Model.User;
 import com.app.Service.PinService;
 import com.app.Service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
@@ -39,23 +46,62 @@ public class PinController {
         this.userService = userService;
     }
 
+    @Operation(summary = "Get all Pins")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully get all pins",
+            content = {@Content(mediaType = "application/json", schema = @Schema(implementation = Pin.class))}),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(mediaType = "application/json"))
+    })
     @GetMapping
     public ResponseEntity<List<Pin>> getAllPins(
-            @RequestParam(value = "offset", defaultValue = "0") int offset) {
+        @Parameter(description = "Pagination offset for the results")
+        @RequestParam(value = "offset", defaultValue = "0") @Min(0) int offset
+    ) {
         List<Pin> pins = pinService.getAllPins(offset);
-        return ResponseEntity.ok(pins);
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(pins);
     }
 
+    @Operation(summary = "Upload a pin")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Pin uploaded successfully",
+            content = {@Content(mediaType = "application/json", schema = @Schema(implementation = Pin.class))}),
+        @ApiResponse(responseCode = "400", description = "Invalid input",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(responseCode = "413", description = "File is larger than 10MB",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(responseCode = "415", description = "File type is not an image",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(mediaType = "application/json"))
+    })
     @PostMapping("/upload")
-    public ResponseEntity<Pin> upload(@ModelAttribute PinDTO pinDTO, @RequestParam("file")MultipartFile file) throws ExecutionException, InterruptedException {
+    public ResponseEntity<Pin> upload(
+        @ModelAttribute PinDTO pinDTO,
+        @Parameter(description = "File to upload")
+        @RequestParam("file")MultipartFile file
+    )throws ExecutionException, InterruptedException {
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.findUserByUsername(authentication.getName());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body( pinService.asyncData(user,pinDTO,file).get());
+        return ResponseEntity.status(HttpStatus.CREATED).contentType(MediaType.MULTIPART_FORM_DATA).body( pinService.asyncData(user,pinDTO,file).get());
     }
 
+    @Operation(summary = "Download the pin with specified by the ID")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully downloaded the pin",
+            content = @Content(mediaType = "application/octet-stream",schema =  @Schema(implementation = InputStreamResource.class))),
+        @ApiResponse(responseCode = "404", description = "Pin not found",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(mediaType = "application/json"))
+    })
     @GetMapping("/download/{id}")
-    public ResponseEntity<InputStreamResource> download(@PathVariable Long id) throws IOException {
+    public ResponseEntity<InputStreamResource> download(
+        @Parameter(description = "Id of the pin to be downloaded", required = true) @PathVariable Long id
+    )throws IOException {
+
         Pin pin = pinService.findById(id);
         Path filePath = Paths.get(pin.getImage_url());
         InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
@@ -70,19 +116,50 @@ public class PinController {
                 .body(resource);
     }
 
+    @Operation(summary = "Fetch a pin by its ID")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Found the pin",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Pin.class))),
+        @ApiResponse(responseCode = "404", description = "Pin not found",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<Pin> getPinById(@PathVariable Long id){
-        return ResponseEntity.ok(pinService.findById(id));
+    public ResponseEntity<Pin> getPinById(
+        @Parameter(description = "id of the pin to be searched", required = true)
+        @PathVariable Long id
+    ){
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(pinService.findById(id));
     }
 
+    @Operation(summary = "Find all comment by pin id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully get all comment",
+            content = @Content(mediaType = "application/json",schema = @Schema(implementation = Comment.class))),
+        @ApiResponse(responseCode = "404", description = "Pin not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping("/{id}/comment")
-    public ResponseEntity<List<Comment>> getAllCommentByPinId(@PathVariable Long id){
+    public ResponseEntity<List<Comment>> getAllCommentByPinId(
+        @Parameter(description = "id of the pin to be searched", required = true)
+        @PathVariable Long id
+    ){
         List<Comment> comments = pinService.getAllCommentByPinId(id);
-        return ResponseEntity.ok(comments);
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(comments);
     }
 
+    @Operation(summary = "Get a pin photo by pin id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Found pin photo",
+            content = @Content(mediaType = "application/octet-stream", schema = @Schema(implementation = Resource.class))),
+        @ApiResponse(responseCode = "404", description = "Pin not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping("/{id}/photo")
-    public ResponseEntity<Resource> getPhotoByPinId(@PathVariable Long id) throws IOException {
+    public ResponseEntity<Resource> getPhotoByPinId(
+        @Parameter(description = "Id of the pin photo to be search", required = true)
+        @PathVariable Long id
+    ) throws IOException {
         Pin pin = pinService.findById(id);
         Path filePath = Paths.get("upload/" + pin.getFileName());
 
@@ -98,12 +175,18 @@ public class PinController {
                 .body(resource);
     }
 
+    @Operation(summary = "Delete an pin by its id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Success delete an ebook", content = { @Content(mediaType = "application/json")}),
+            @ApiResponse(responseCode = "404", description = "Ebook not found", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
+    })
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deletePinById(@PathVariable Long id) throws IOException {
+    public ResponseEntity<Void> deletePinById(@PathVariable Long id) throws IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.findUserByUsername(authentication.getName());
         pinService.deleteIfUserMatches(user,id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.APPLICATION_JSON).build();
     }
 
 }
