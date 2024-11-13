@@ -1,8 +1,12 @@
 package com.app.Controller;
 
 import com.app.DTO.LoginDTO;
-import com.app.DTO.RegisterDTO;
-import com.app.DTO.UpdateUserDTO;
+import com.app.DTO.request.LoginUserRequest;
+import com.app.DTO.request.RegisterUserRequest;
+import com.app.DTO.request.UpdateUserRequest;
+import com.app.DTO.response.LoginUserResponse;
+import com.app.DTO.response.RegisterUserResponse;
+import com.app.DTO.response.UpdateUserResponse;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.User;
 import com.app.Service.UserService;
@@ -11,32 +15,28 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.Nullable;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.sql.Timestamp;
-import java.time.Instant;
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
 @RequestMapping("/api")
 @RestController
+@AllArgsConstructor
 public class UserController {
 
     private final UserService userService;
     private final JwtProvider jwtProvider;
-    @Autowired
-    public UserController(UserService userService, JwtProvider jwtProvider) {
-        this.userService = userService;
-        this.jwtProvider = jwtProvider;
-    }
 
     @Operation(summary = "Login account")
     @ApiResponses(value = {
@@ -46,21 +46,19 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/login")
-    public ResponseEntity<Map<String,String>> login(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+    public ResponseEntity<LoginUserResponse> login(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Login Data",required = true,
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginDTO.class))
         )
-        @RequestBody LoginDTO loginDTO
-    ){
-        User user = userService.login(loginDTO);
-        Map<String,String> response = new HashMap<>();
+        @RequestBody LoginUserRequest request
+            ){
+        User user = userService.login(request);
 
         String token = jwtProvider.generateToken(user.getUsername());
-        response.put("status","ok");
-        response.put("token",token);
-        response.put("timestamp", String.valueOf(LocalDateTime.now()));
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(response);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new LoginUserResponse(token));
     }
 
     @Operation(summary = "Register user account")
@@ -71,53 +69,41 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
     @PostMapping("/register")
-    public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterDTO registerDTO) {
-        User existingEmail = userService.findUserByEmail(registerDTO.getEmail());
-        User existingUsername = userService.findUserByUsername(registerDTO.getUsername());
-
-        Map<String, Object> response = new HashMap<>();
-
-        if (existingEmail != null) {
-            response.put("status", "error");
-            response.put("message", "Email is already taken.");
-            response.put("timestamp", String.valueOf(LocalDateTime.now()));
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-        }
-
-        if (existingUsername != null) {
-            response.put("status", "error");
-            response.put("message", "Username is already taken.");
-            response.put("timestamp", String.valueOf(LocalDateTime.now()));
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-        }
-
-        userService.register(registerDTO);
-        response.put("status", "ok");
-        response.put("message", "successfully registered");
-        response.put("timestamp", String.valueOf(LocalDateTime.now()));
-        return ResponseEntity.status(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON).body(response);
+    public ResponseEntity<RegisterUserResponse> register(@RequestBody RegisterUserRequest request) throws IOException {
+        User user = userService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new RegisterUserResponse(
+                user.getId(), user.getUsername(), user.getEmail(),
+                user.getProfilePicture(),user.getGender())
+            );
     }
 
     @Operation(summary = "Get username from token")
     @GetMapping("/get-username")
-    public ResponseEntity<String> getUsernameFromToken(){
+    public ResponseEntity<Map<String,Object>> getUsernameFromToken(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(username);
+        Map<String,Object> map = new HashMap<>();
+        map.put("username",username);
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(map);
     }
 
     @Operation(summary = "Update user info")
-    @PutMapping("/update-user-information")
-    public ResponseEntity<?> updateUserInformation( @RequestBody UpdateUserDTO updateUserDTO){
+    @PutMapping("/update-user")
+    public ResponseEntity<UpdateUserResponse> updateUser(
+            @ModelAttribute UpdateUserRequest request,
+            @Nullable @RequestPart("profilePicture") MultipartFile profilePicture) throws IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        User user = userService.findUserByUsername(username);
 
-        user.setUsername(updateUserDTO.getUsername());
-        user.setEmail(updateUserDTO.getEmail());
-        user.setPassword(updateUserDTO.getPassword());
-        userService.update(user);
-        return ResponseEntity.status(HttpStatus.OK).build();
+        User user = userService.update(request,username,profilePicture);
+        return ResponseEntity.status(HttpStatus.OK)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new UpdateUserResponse(
+                user.getId(),user.getUsername(),user.getEmail(),
+                user.getProfilePicture(),user.getBio(),user.getGender()
+            ));
     }
 
 }

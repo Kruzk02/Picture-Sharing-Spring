@@ -6,10 +6,10 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+@Setter
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
 @Builder
 public class User implements Serializable {
 
@@ -18,15 +18,8 @@ public class User implements Serializable {
     private String email;
     private String password;
     private List<Role> roles;
+    private String profilePicture;
+    private String bio;
+    private Gender gender;
 
-    public List<Role> getRoles() {
-        if(roles == null){
-            roles = new ArrayList<>();
-        }
-        return roles;
-    }
-
-    public void setRoles(List<Role> roles) {
-        this.roles = roles;
-    }
 }

@@ -39,12 +39,16 @@ public class PrivilegeDaoImpl implements PrivilegeDao {
 
     @Override
     public Privilege findByName(String name) {
-        String sql = "SELECT * FROM privileges WHERE name = ?";
-        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
-            Privilege privilege = new Privilege();
-            privilege.setId(rs.getLong("id"));
-            privilege.setName(rs.getString("name"));
-            return privilege;
-        }, name);
+        try {
+            String sql = "SELECT * FROM privileges WHERE name = ?";
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+                Privilege privilege = new Privilege();
+                privilege.setId(rs.getLong("id"));
+                privilege.setName(rs.getString("name"));
+                return privilege;
+            }, name);
+        }catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 }

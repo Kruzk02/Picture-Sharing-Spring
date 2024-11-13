@@ -2,6 +2,7 @@ package com.app.Service;
 
 import com.app.DAO.PrivilegeDao;
 import com.app.DAO.RoleDao;
+import com.app.Model.Gender;
 import com.app.Model.Privilege;
 import com.app.Model.Role;
 import com.app.Model.User;
@@ -61,18 +62,24 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
         executeSqlScript("comment.sql");
         executeSqlScript("sub_comment.sql");
 
-        createPrivilegeIfNotFound("READ_PRIVILEGE");
-        createPrivilegeIfNotFound("WRITE_PRIVILEGE");
+        Privilege readPrivilege = createPrivilegeIfNotFound("READ_PRIVILEGE");
+        Privilege writePrivilege = createPrivilegeIfNotFound("WRITE_PRIVILEGE");
 
-        createRoleIfNotFound("ROLE_ADMIN");
-        createRoleIfNotFound("ROLE_USER");
+        Role roleAdmin = createRoleIfNotFound("ROLE_ADMIN", List.of(readPrivilege,writePrivilege));
+        Role roleUser = createRoleIfNotFound("ROLE_USER", List.of(readPrivilege));
 
         User user = User.builder()
                 .email("phucnguyen@gmail.com")
                 .username("phucnguyen")
                 .password(passwordEncoder.encode("123123"))
+                .profilePicture("static/default_profile_picture.png")
+                .roles(List.of(roleAdmin))
+                .gender(Gender.MALE)
                 .build();
-        createAdminAccount(user);
+//        createAdminAccount(user);
+        mappingRolePrivilege(roleAdmin, readPrivilege);
+        mappingRolePrivilege(roleAdmin, writePrivilege);
+        mappingRolePrivilege(roleUser, readPrivilege);
 
         alreadySetup = true;
     }
@@ -119,29 +126,41 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
 
         }
     }
-    private void createRoleIfNotFound(String name){
-        log.info("Checking if role exist with a name: {}",name);
-        Role role = roleDao.findByName(name);
-        Optional<Role> roleOptional = Optional.ofNullable(role);
-        if(roleOptional.isEmpty()){
-            log.info("Role with name {} not found. Create new Role",name);
-            role = new Role(name);
-            roleDao.create(role);
 
-            log.info("Role created: {}",role);
-        }
+    private void mappingRolePrivilege(Role role, Privilege privilege) {
+        String sql = "INSERT INTO roles_privileges(role_id,privilege_id) VALUES (?,?)";
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setLong(1, role.getId());
+            ps.setLong(2, privilege.getId());
+            return ps;
+        });
+
     }
 
-    private void createPrivilegeIfNotFound(String name){
+    private Role createRoleIfNotFound(String name,Collection<Privilege> privileges){
+        log.info("Checking if role exist with a name: {}",name);
+        Role role = roleDao.findByName(name);
+        if (role == null) {
+            log.info("Role with name {} not found. Creating new Role", name);
+            role = new Role(name);
+            role.setPrivileges(privileges);
+            roleDao.create(role);
+            log.info("Role created: {}", role);
+        }
+        return role;
+    }
+
+    private Privilege createPrivilegeIfNotFound(String name){
         log.info("Checking if privilege exist with a name: {}",name);
         Privilege privilege = privilegeDao.findByName(name);
-        Optional<Privilege> privilegeOptional = Optional.ofNullable(privilege);
-        if (privilegeOptional.isEmpty()) {
-            log.info("Privilege with name {} not found. Create new Privilege",name);
+        if (privilege == null) {
+            log.info("Privilege with name {} not found. Creating new Privilege", name);
             privilege = new Privilege(name);
             privilegeDao.create(privilege);
-            log.info("Privilege create: {}",privilege);
+            log.info("Privilege created: {}", privilege);
         }
+        return privilege;
     }
 
 }

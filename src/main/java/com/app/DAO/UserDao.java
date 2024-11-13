@@ -47,6 +47,24 @@ public interface UserDao {
      */
     User findUserByEmail(String email);
 
+    /**
+     * Find a full details user by their username
+     * @param username the username of the user to find
+     * @return The user object found, or null if not found
+     */
+    User findFullUserByUsername(String username);
+
+    /**
+     * Find password and role by their username
+     * @param username the username of the password and role to find
+     * @return The user object found, or null if not found
+     */
     User findPasswordNRoleByUsername(String username);
+
+    /**
+     * Update existing user
+     * @param user the user object to update
+     * @return The user object
+     */
     User update(User user);
 }

@@ -1,6 +1,7 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
+import com.app.Model.Gender;
 import com.app.Model.Role;
 import com.app.Model.User;
 import com.app.exception.sub.UserNotFoundException;
@@ -20,9 +21,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
 
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
+@Transactional
 public class UserDaoImpl implements UserDao {
 
     private final JdbcTemplate jdbcTemplate;
@@ -32,10 +36,10 @@ public class UserDaoImpl implements UserDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.SERIALIZABLE)
     @Override
     public User register(User user) {
-        String userSql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
+        String userSql = "INSERT INTO users (username, email, password, profilePicture, gender) VALUES (?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {
@@ -43,25 +47,15 @@ public class UserDaoImpl implements UserDao {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getEmail());
             ps.setString(3, user.getPassword());
+            ps.setString(4, user.getProfilePicture());
+            ps.setString(5, user.getGender().toString().toUpperCase());
             return ps;
         }, keyHolder);
 
         if (rowsAffected > 0) {
             user.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
 
-            String userRoleSql = "INSERT INTO users_roles (user_id, role_id) VALUES (?, ?)";
-            jdbcTemplate.batchUpdate(userRoleSql, new BatchPreparedStatementSetter() {
-                @Override
-                public void setValues(PreparedStatement ps, int i) throws SQLException {
-                    ps.setLong(1, user.getId());
-                    ps.setInt(2, 2);
-                }
-
-                @Override
-                public int getBatchSize() {
-                    return 1;
-                }
-            });
+            assignRoleToUser(user.getId(),2);
 
             return user;
         } else {
@@ -69,6 +63,24 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
+    private void assignRoleToUser(Long userId, int roleId) {
+        String userRoleSql = "INSERT INTO users_roles (user_id, role_id) VALUES (?, ?)";
+        jdbcTemplate.batchUpdate(userRoleSql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ps.setLong(1, userId);
+                ps.setInt(2, roleId);
+            }
+
+            @Override
+            public int getBatchSize() {
+                return 1;
+            }
+        });
+    }
+
+    @Transactional(readOnly = true)
     @Override
     public User login(String username) {
         try {
@@ -78,42 +90,57 @@ public class UserDaoImpl implements UserDao {
                     "JOIN roles ON users_roles.role_id = roles.id " +
                     "WHERE u.username = ?";
 
-            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(false, false, false, false), username);
         } catch (EmptyResultDataAccessException e) {
             return null;
         }
     }
 
+    @Transactional(readOnly = true)
     @Override
     public User findUserById(Long id) {
         try {
             String sql = "SELECT id, username, email FROM users WHERE id = ?";
-            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), id);
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(false, false, false, false), id);
         } catch (EmptyResultDataAccessException e) {
             throw new UserNotFoundException("User not found with id: " + id);
         }
     }
 
+    @Transactional(readOnly = true)
     @Override
     public User findUserByUsername(String username) {
         try {
             String sql = "SELECT id, username, email FROM users WHERE username = ?";
-            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), username);
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(false, false, false, false), username);
         } catch (EmptyResultDataAccessException e) {
             return null;
         }
     }
 
+    @Transactional(readOnly = true)
     @Override
     public User findUserByEmail(String email) {
         try {
             String sql = "SELECT id, username, email FROM users WHERE email = ?";
-            return jdbcTemplate.queryForObject(sql, new UserRowMapper(), email);
+            return jdbcTemplate.queryForObject(sql, new UserRowMapper(false, false, false, false), email);
         } catch (EmptyResultDataAccessException e) {
             return null;
         }
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public User findFullUserByUsername(String username) {
+        try {
+            String sql = "SELECT id, username, email, password, bio, profilePicture, gender FROM users WHERE username = ?";
+            return jdbcTemplate.queryForObject(sql,new UserRowMapper(true, true, true, true), username);
+        }catch (EmptyResultDataAccessException e) {
+            return null;
+        }
+    }
+
+    @Transactional(readOnly = true)
     @Override
     public User findPasswordNRoleByUsername(String username) {
         try {
@@ -155,13 +182,16 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public User update(User user) {
-        String sql = "UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?";
-        int rowsAffected = jdbcTemplate.update(sql, user.getUsername(), user.getEmail(), user.getPassword(), user.getId());
+        String sql = "UPDATE users SET username = ?, email = ?, password = ?, bio = ?, profilePicture = ?, gender = ? WHERE id = ?";
+        int rowsAffected = jdbcTemplate.update(sql,
+                user.getUsername(), user.getEmail(), user.getPassword(),
+                user.getBio(), user.getProfilePicture(), user.getGender().toString().toLowerCase(),
+                user.getId());
         if (rowsAffected > 0) {
-            return findUserById(user.getId());
+            return findFullUserByUsername(user.getUsername());
         } else {
             return null;
         }
@@ -169,12 +199,40 @@ public class UserDaoImpl implements UserDao {
 }
 
 class UserRowMapper implements RowMapper<User> {
+    private final boolean includeProfilePicture;
+    private final boolean includeBio;
+    private final boolean includePassword;
+    private final boolean includeGender;
+
+    public UserRowMapper(boolean includeProfilePicture, boolean includeBio, boolean includePassword, boolean includeGender) {
+        this.includeProfilePicture = includeProfilePicture;
+        this.includeBio = includeBio;
+        this.includePassword = includePassword;
+        this.includeGender = includeGender;
+    }
+
     @Override
     public User mapRow(ResultSet rs, int rowNum) throws SQLException {
         User user = new User();
         user.setId(rs.getLong("id"));
         user.setUsername(rs.getString("username"));
         user.setEmail(rs.getString("email"));
+
+        if (includeProfilePicture) {
+            user.setProfilePicture(rs.getString("profilePicture"));
+        }
+        if (includeBio) {
+            user.setBio(rs.getString("bio"));
+        }
+        if (includePassword) {
+            user.setPassword(rs.getString("password"));
+        }
+        if (includeGender) {
+            String genderString = rs.getString("gender");
+            if (genderString != null) {
+                user.setGender(Gender.valueOf(genderString.toUpperCase()));
+            }
+        }
         return user;
     }
 }
