@@ -69,11 +69,8 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
     @PostMapping("/register")
-    public ResponseEntity<RegisterUserResponse> register(
-            @ModelAttribute RegisterUserRequest request,
-            @RequestPart("profilePicture") MultipartFile profilePicture
-    ) throws IOException {
-        User user = userService.register(request,profilePicture);
+    public ResponseEntity<RegisterUserResponse> register(@RequestBody RegisterUserRequest request) throws IOException {
+        User user = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new RegisterUserResponse(

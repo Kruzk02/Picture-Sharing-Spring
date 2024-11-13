@@ -39,7 +39,7 @@ public class UserDaoImpl implements UserDao {
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.SERIALIZABLE)
     @Override
     public User register(User user) {
-        String userSql = "INSERT INTO users (username, email, password, profilePicture, bio, gender) VALUES (?, ?, ?,?,?,?)";
+        String userSql = "INSERT INTO users (username, email, password, profilePicture, gender) VALUES (?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {
@@ -48,8 +48,7 @@ public class UserDaoImpl implements UserDao {
             ps.setString(2, user.getEmail());
             ps.setString(3, user.getPassword());
             ps.setString(4, user.getProfilePicture());
-            ps.setString(5, user.getBio());
-            ps.setString(6, user.getGender().toString().toUpperCase());
+            ps.setString(5, user.getGender().toString().toUpperCase());
             return ps;
         }, keyHolder);
 

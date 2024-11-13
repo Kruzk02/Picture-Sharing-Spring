@@ -6,6 +6,7 @@ import com.app.DTO.LoginDTO;
 import com.app.DTO.request.LoginUserRequest;
 import com.app.DTO.request.RegisterUserRequest;
 import com.app.DTO.request.UpdateUserRequest;
+import com.app.Model.Gender;
 import com.app.Model.User;
 import com.app.exception.sub.FileNotSupportException;
 import com.app.exception.sub.UserAlreadyExistsException;
@@ -52,7 +53,7 @@ public class UserService {
      * @param request The RegisterRequestDTO object containing user registration information.
      * @return The registered User entity.
      */
-    public User register(RegisterUserRequest request, MultipartFile profilePicture) throws IOException {
+    public User register(RegisterUserRequest request) throws IOException {
 
         if (userDao.findUserByEmail(request.email()) != null) {
             throw new UserAlreadyExistsException("Email is already taken.");
@@ -65,15 +66,11 @@ public class UserService {
         User user = User.builder()
                 .username(request.username())
                 .email(request.email())
-                .bio(request.bio())
-                .gender(request.gender())
                 .password(passwordEncoder.encode(request.password()))
+                .gender(Gender.OTHER)
+                .profilePicture(getDefaultProfilePicturePath())
                 .roles(Arrays.asList(roleDao.findByName("ROLE_USER")))
                 .build();
-
-        if (profilePicture != null && !profilePicture.isEmpty()) {
-            saveProfilePicture(user,profilePicture);
-        }
 
         return userDao.register(user);
     }
@@ -82,7 +79,7 @@ public class UserService {
      * Authenticates a user based on provided loginDTO.<p>
      * Use the authenticationManager to authenticate the user and sets the authentication in the SecurityContextHolder.
      *
-     * @param loginDTO The LoginDTO object containing user login credentials.
+     * @param request The LoginUserRequest object containing user login credentials.
      * @return The authentication User entity.
      */
     public User login(LoginUserRequest request){
