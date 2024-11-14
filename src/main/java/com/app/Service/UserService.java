@@ -2,7 +2,6 @@ package com.app.Service;
 
 import com.app.DAO.RoleDao;
 import com.app.DAO.UserDao;
-import com.app.DTO.LoginDTO;
 import com.app.DTO.request.LoginUserRequest;
 import com.app.DTO.request.RegisterUserRequest;
 import com.app.DTO.request.UpdateUserRequest;
@@ -14,6 +13,7 @@ import com.app.exception.sub.UserNotFoundException;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -127,6 +127,10 @@ public class UserService {
         return userDao.findUserByEmail(email);
     }
 
+    public String findUserProfilePictureByUsername(String username) {
+        return userDao.findUserProfilePictureByUsername(username);
+    }
+
     public User update(UpdateUserRequest request, String username, MultipartFile profilePicture) throws IOException {
         User user = userDao.findFullUserByUsername(username);
 
@@ -185,9 +189,9 @@ public class UserService {
     }
 
     private String getDefaultProfilePicturePath() {
-        Resource defaultProfilePic = new ClassPathResource("static/default_profile_picture.png");
+        Resource defaultProfilePic = new FileSystemResource("profile_picture/default_profile_picture.png");
         if (defaultProfilePic.exists()) {
-            return "static/default_profile_picture.png";
+            return "profile_picture/default_profile_picture.png";
         } else {
             System.out.println("Warning: Default profile picture not found.");
             return null;
