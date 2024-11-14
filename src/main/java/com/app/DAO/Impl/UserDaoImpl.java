@@ -4,6 +4,7 @@ import com.app.DAO.UserDao;
 import com.app.Model.Gender;
 import com.app.Model.Role;
 import com.app.Model.User;
+import com.app.exception.sub.FileNotFoundException;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -179,6 +180,19 @@ public class UserDaoImpl implements UserDao {
             throw new UserNotFoundException("User not found with a username: " + username);
         } catch (DataAccessException e) {
             throw new RuntimeException("An error occurred while accessing the database", e);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String findUserProfilePictureByUsername(String username) {
+        try {
+            String sql = "SELECT profilePicture FROM users WHERE username = ?";
+            return jdbcTemplate.queryForObject(sql,
+                    (rs, rowNum) -> rs.getString("profilePicture"),
+                    username);
+        } catch (EmptyResultDataAccessException e) {
+            throw new FileNotFoundException("File not found with a username: " + username);
         }
     }
 
