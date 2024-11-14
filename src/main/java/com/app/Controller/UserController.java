@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -87,6 +92,25 @@ public class UserController {
         Map<String,Object> map = new HashMap<>();
         map.put("username",username);
         return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(map);
+    }
+
+    @GetMapping("/profile-picture")
+    public ResponseEntity<Resource> getProfilePicture() throws IOException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String profilePicture = userService.findUserProfilePictureByUsername(authentication.getName());
+
+        Path path = Paths.get(profilePicture);
+
+        String type = Files.probeContentType(path);
+        if (type == null) {
+            type = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
+
+        Resource resource = new FileSystemResource(path);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(type))
+                .body(resource);
     }
 
     @Operation(summary = "Update user info")
