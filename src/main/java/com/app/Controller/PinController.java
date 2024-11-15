@@ -1,6 +1,10 @@
 package com.app.Controller;
 
-import com.app.DTO.PinDTO;
+import com.app.DTO.request.UploadPinRequest;
+import com.app.DTO.response.GetAllPinResponse;
+import com.app.DTO.response.GetCommentResponse;
+import com.app.DTO.response.GetPinResponse;
+import com.app.DTO.response.UploadPinResponse;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.User;
@@ -22,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,7 +36,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/pin")
@@ -54,12 +58,14 @@ public class PinController {
             content = @Content(mediaType = "application/json"))
     })
     @GetMapping
-    public ResponseEntity<List<Pin>> getAllPins(
+    public ResponseEntity<GetAllPinResponse> getAllPins(
         @Parameter(description = "Pagination offset for the results")
         @RequestParam(value = "offset", defaultValue = "0") @Min(0) int offset
     ) {
         List<Pin> pins = pinService.getAllPins(offset);
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(pins);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new GetAllPinResponse(pins));
     }
 
     @Operation(summary = "Upload a pin")
@@ -76,16 +82,17 @@ public class PinController {
             content = @Content(mediaType = "application/json"))
     })
     @PostMapping("/upload")
-    public ResponseEntity<Pin> upload(
-        @ModelAttribute PinDTO pinDTO,
-        @Parameter(description = "File to upload")
-        @RequestParam("file")MultipartFile file
-    )throws ExecutionException, InterruptedException {
-
+    public ResponseEntity<UploadPinResponse> upload(
+            @ModelAttribute UploadPinRequest request,
+            @Parameter(description = "File to upload")
+            @RequestPart("file") MultipartFile file
+    ) throws IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.findUserByUsername(authentication.getName());
-
-        return ResponseEntity.status(HttpStatus.CREATED).contentType(MediaType.MULTIPART_FORM_DATA).body( pinService.asyncData(user,pinDTO,file).get());
+        pinService.asyncData(user.getId(), request, file);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new UploadPinResponse("Your pin is being processing"));
     }
 
     @Operation(summary = "Download the pin with specified by the ID")
@@ -107,7 +114,7 @@ public class PinController {
         InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pin.getFileName() + ".png");
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pin.getFileName());
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
         return ResponseEntity.ok()
@@ -125,11 +132,14 @@ public class PinController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Pin> getPinById(
+    public ResponseEntity<GetPinResponse> getPinById(
         @Parameter(description = "id of the pin to be searched", required = true)
         @PathVariable Long id
     ){
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(pinService.findById(id));
+        Pin pin = pinService.findById(id);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new GetPinResponse(pin.getUserId(),pin.getImage_url(),pin.getDescription()));
     }
 
     @Operation(summary = "Find all comment by pin id")
@@ -140,12 +150,14 @@ public class PinController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}/comment")
-    public ResponseEntity<List<Comment>> getAllCommentByPinId(
+    public ResponseEntity<GetCommentResponse> getAllCommentByPinId(
         @Parameter(description = "id of the pin to be searched", required = true)
         @PathVariable Long id
     ){
         List<Comment> comments = pinService.getAllCommentByPinId(id);
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(comments);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new GetCommentResponse(comments));
     }
 
     @Operation(summary = "Get a pin photo by pin id")
@@ -186,7 +198,9 @@ public class PinController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.findUserByUsername(authentication.getName());
         pinService.deleteIfUserMatches(user,id);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.APPLICATION_JSON).build();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .contentType(MediaType.APPLICATION_JSON)
+                .build();
     }
 
 }

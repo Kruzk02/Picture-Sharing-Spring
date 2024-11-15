@@ -2,7 +2,7 @@ package com.app.Service;
 
 import com.app.DAO.CommentDao;
 import com.app.DAO.PinDao;
-import com.app.DTO.PinDTO;
+import com.app.DTO.request.UploadPinRequest;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.User;
@@ -12,6 +12,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,32 +40,23 @@ public class PinService {
 
     private final PinDao pinDao;
     private final CommentDao commentDao;
-    private final ModelMapper modelMapper;
     private final RedisTemplate<Object,Object> redisTemplate;
 
     /**
      * Constructs a new PinService.
      *
      * @param pinDao The PinDaoImpl for accessing pin related data.
-     * @param modelMapper The ModelMapper for entity-DTO mapping.
      */
     @Autowired
-    public PinService(PinDao pinDao, CommentDao commentDao, ModelMapper modelMapper, RedisTemplate<Object, Object> redisTemplate) {
+    public PinService(PinDao pinDao, CommentDao commentDao, RedisTemplate<Object, Object> redisTemplate) {
         this.pinDao = pinDao;
         this.commentDao = commentDao;
-        this.modelMapper = modelMapper;
         this.redisTemplate = redisTemplate;
     }
 
     @Async
-    public CompletableFuture<Pin> asyncData(User user, PinDTO pinDTO, MultipartFile multipartFile) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return save(user, pinDTO, multipartFile);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to save data", e);
-            }
-        });
+    public CompletableFuture<Pin> asyncData(Long userId, UploadPinRequest request, MultipartFile multipartFile) throws IOException {
+        return CompletableFuture.completedFuture(save(userId, request, multipartFile));
     }
     /**
      * Retrieves all pins.
@@ -105,29 +98,35 @@ public class PinService {
      * Saves a new pin with a provided PinDTO and MultipartFile. <p>
      * Saves the upload file to the "upload" directory and sets the image URL and file name to pin.
      *
-     * @param pinDTO The PinDTO object containing pin information.
+     * @param request The UploadPinRequest object containing pin information.
      * @param multipartFile The MultipartFile containing the upload image file.
      * @return The saved Pin entity.
      * @throws IOException If an I/O error occurs while saving the file.
      */
-    public Pin save(User user, PinDTO pinDTO, MultipartFile multipartFile) throws IOException {
+    public Pin save(Long userId, UploadPinRequest request, MultipartFile multipartFile) throws IOException {
         Path uploadPath = Paths.get("upload");
-        if(!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+        if(!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
 
-        String fileCode = RandomStringUtils.randomAlphabetic(8)+".png";
+        int lastIndexOfDot = Objects.requireNonNull(multipartFile.getOriginalFilename()).lastIndexOf('.');
+        String extension = multipartFile.getOriginalFilename().substring(lastIndexOfDot);
+
+        String fileCode = RandomStringUtils.randomAlphabetic(8) + extension;
+        Path filePath = uploadPath.resolve(fileCode);
 
         try (InputStream inputStream = multipartFile.getInputStream()) {
-            Path filePath = uploadPath.resolve(fileCode);
             Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            Pin pin = modelMapper.map(pinDTO,Pin.class);
-            pin.setImage_url(filePath.toString());
-            pin.setFileName(fileCode);
-            pin.setUserId(user.getId());
-            return pinDao.save(pin);
         } catch (IOException e) {
             throw new IOException("Could not save file: " + fileCode, e);
         }
+        Pin pin = Pin.builder()
+                .userId(userId)
+                .image_url(filePath.toString())
+                .fileName(fileCode)
+                .description(request.description())
+                .build();
+        return pinDao.save(pin);
     }
 
     /**
