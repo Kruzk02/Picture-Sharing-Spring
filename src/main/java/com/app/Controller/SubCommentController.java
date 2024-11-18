@@ -1,6 +1,9 @@
 package com.app.Controller;
 
-import com.app.DTO.SubCommentDTO;
+import com.app.DTO.request.CreateSubCommentRequest;
+import com.app.DTO.response.CommentDTO;
+import com.app.DTO.response.CreateSubCommentResponse;
+import com.app.DTO.response.UserDTO;
 import com.app.Model.SubComment;
 import com.app.Model.User;
 import com.app.Service.SubCommentService;
@@ -41,7 +44,9 @@ public class SubCommentController {
             @PathVariable Long commentId
     ) {
         List<SubComment> subComments = subCommentService.findAllByCommentId(commentId);
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(subComments);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(subComments);
     }
 
     @Operation(summary = "Fetch sub comment by its ID")
@@ -56,7 +61,9 @@ public class SubCommentController {
         @Parameter(description = "Id of the sub comment to be searched")
         @PathVariable Long id
     ) {
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(subCommentService.findById(id));
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(subCommentService.findById(id));
     }
 
     @Operation(summary = "Create new sub comment")
@@ -67,20 +74,23 @@ public class SubCommentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
-    public ResponseEntity<SubComment> save(
+    public ResponseEntity<CreateSubCommentResponse> save(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "SubComment to created", required = true,
-            content = @Content(mediaType = "application/json",
-            schema = @Schema(implementation = (SubCommentDTO.class)))
+            content = @Content(mediaType = "application/json")
         )
-        @RequestBody SubCommentDTO subCommentDTO
+        @RequestBody CreateSubCommentRequest request
     ) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userService.findUserByUsername(authentication.getName());
-
-        subCommentDTO.setUser(user);
-
-        return ResponseEntity.status(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON).body(subCommentService.save(subCommentDTO));
+        SubComment subComment = subCommentService.save(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new CreateSubCommentResponse(
+                        subComment.getId(),
+                        subComment.getContent(),
+                        new CommentDTO(subComment.getComment().getId(), subComment.getComment().getContent()),
+                        new UserDTO(subComment.getUser().getId(), subComment.getUser().getUsername()),
+                        subComment.getTimestamp().toLocalDateTime()
+                ));
     }
 
     @Operation(summary = "Delete sub comment by it ID")

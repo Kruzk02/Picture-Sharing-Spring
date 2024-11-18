@@ -1,17 +1,21 @@
 package com.app.Service;
 
+import com.app.DAO.CommentDao;
 import com.app.DAO.SubCommentDao;
-import com.app.DTO.SubCommentDTO;
+import com.app.DAO.UserDao;
+import com.app.DTO.request.CreateSubCommentRequest;
 import com.app.Model.SubComment;
 import com.app.Model.User;
 import com.app.exception.sub.UserNotMatchException;
 import lombok.AllArgsConstructor;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -21,14 +25,24 @@ import java.util.stream.Collectors;
 public class SubCommentService {
 
     private final SubCommentDao subCommentDao;
-    private final ModelMapper modelMapper;
+    private final CommentDao commentDao;
+    private final UserDao userDao;
     private final RedisTemplate<Object,Object> redisTemplate;
 
-    public SubComment save(SubCommentDTO subCommentDTO) {
-        SubComment subComment = modelMapper.map(subCommentDTO, SubComment.class);
-        System.out.println(subComment.getId());
-        redisTemplate.opsForValue().set("subComment:" + subComment.getId(),subComment, Duration.ofHours(2));
-        return subCommentDao.save(subComment);
+    public SubComment save(CreateSubCommentRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        SubComment subComment = SubComment.builder()
+                .content(request.content())
+                .comment(commentDao.findById(request.commentId()))
+                .user(userDao.findUserByUsername(authentication.getName()))
+                .timestamp(Timestamp.from(Instant.now()))
+                .build();
+
+        SubComment savedSubComment = subCommentDao.save(subComment);
+        redisTemplate.opsForValue().set("subComment:" + savedSubComment.getId(),savedSubComment, Duration.ofHours(2));
+
+        return savedSubComment;
     }
 
     public List<SubComment> findAllByCommentId(Long commentId) {

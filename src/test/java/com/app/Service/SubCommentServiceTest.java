@@ -2,6 +2,7 @@ package com.app.Service;
 
 import com.app.DAO.SubCommentDao;
 import com.app.DTO.SubCommentDTO;
+import com.app.DTO.request.CreateSubCommentRequest;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.SubComment;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SubCommentServiceTest {
+
     @Mock private SubCommentDao subCommentDao;
     @Mock private ModelMapper modelMapper;
     @Mock private RedisTemplate<Object, Object> redisTemplate;
@@ -75,29 +77,14 @@ class SubCommentServiceTest {
     @Test
     void testSaveSubComment() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        SubCommentDTO subCommentDTO = new SubCommentDTO();
-        subCommentDTO.setComment(Comment.builder()
-                .id(1L)
-                .content("HELLO WORLD")
-                .user(User.builder()
-                        .id(1L)
-                        .username("test")
-                        .email("test@gmail.com")
-                        .password("test")
-                        .build())
-                .pin(Pin.builder()
-                        .id(1L)
-                        .description("NOPE")
-                        .fileName("YES")
-                        .image_url("/upload")
-                        .userId(1L)
-                        .build()).build());
-        subCommentDTO.setContent("WELL");
+        CreateSubCommentRequest request = new CreateSubCommentRequest(
+                "HELLO WORLD",
+                1L
+        );
 
-        when(modelMapper.map(subCommentDTO, SubComment.class)).thenReturn(subComment);
         when(subCommentDao.save(subComment)).thenReturn(subComment);
 
-        SubComment result = subCommentService.save(subCommentDTO);
+        SubComment result = subCommentService.save(request);
         assertEquals(subComment.getId(),result.getId());
         verify(valueOperations).set("subComment:1",subComment, Duration.ofHours(2));
         verify(subCommentDao).save(subComment);
