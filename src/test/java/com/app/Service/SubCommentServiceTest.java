@@ -1,7 +1,6 @@
 package com.app.Service;
 
 import com.app.DAO.SubCommentDao;
-import com.app.DTO.SubCommentDTO;
 import com.app.DTO.request.CreateSubCommentRequest;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
@@ -20,12 +19,9 @@ import org.springframework.data.redis.core.ValueOperations;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

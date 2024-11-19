@@ -2,7 +2,8 @@ package com.app.Service;
 
 import com.app.DAO.Impl.CommentDaoImpl;
 import com.app.DAO.Impl.PinDaoImpl;
-import com.app.DTO.CommentDTO;
+import com.app.DTO.request.CreateCommentRequest;
+import com.app.DTO.request.CreateSubCommentRequest;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.User;
@@ -11,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
@@ -62,26 +62,25 @@ public class CommentServiceTest {
 
     @Test
     public void testSaveComment() {
-        CommentDTO commentDTO = new CommentDTO();
-        commentDTO.setUser(user);
-        commentDTO.setPin(pin);
-        commentDTO.setContent("HELLO WORLD");
+        CreateCommentRequest request = new CreateCommentRequest(
+                "content",
+                1L
+        );
 
-        Long pinId = commentDTO.getPin().getId();
+        Long pinId = request.pinId();
         Pin pin = pinDao.findById(pinId);
 
         Comment comment = new Comment();
-        comment.setContent(commentDTO.getContent());
+        comment.setContent(request.content());
         comment.setUser(comment.getUser());
         comment.setPin(pin);
 
-        when(modelMapper.map(commentDTO, Comment.class)).thenReturn(comment);
         when(commentDao.save(comment)).thenReturn(comment);
 
-        Comment savedComment = commentService.save(commentDTO);
+        Comment savedComment = commentService.save(request);
 
         assertEquals(comment.getContent(), savedComment.getContent());
-        verify(modelMapper, times(1)).map(commentDTO, Comment.class);
+        verify(modelMapper, times(1)).map(request, Comment.class);
         verify(commentDao, times(1)).save(comment);
     }
 
@@ -89,7 +88,7 @@ public class CommentServiceTest {
     public void testDeleteById() {
         when(commentDao.findById(comment.getId())).thenReturn(comment);
 
-        commentService.deleteIfUserMatches(user,comment.getId());
+        commentService.delete(comment.getId());
         verify(commentDao).deleteById(comment.getId());
     }
 
