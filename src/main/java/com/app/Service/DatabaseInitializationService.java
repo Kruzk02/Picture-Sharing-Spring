@@ -61,6 +61,7 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
         executeSqlScript("users_roles.sql");
         executeSqlScript("comment.sql");
         executeSqlScript("sub_comment.sql");
+        executeSqlScript("verification_token.sql");
 
         Privilege readPrivilege = createPrivilegeIfNotFound("READ_PRIVILEGE");
         Privilege writePrivilege = createPrivilegeIfNotFound("WRITE_PRIVILEGE");
@@ -72,7 +73,7 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
                 .email("phucnguyen@gmail.com")
                 .username("phucnguyen")
                 .password(passwordEncoder.encode("123123"))
-                .profilePicture("static/default_profile_picture.png")
+                .profilePicture("profile_picture/default_profile_picture.png")
                 .roles(List.of(roleAdmin))
                 .gender(Gender.MALE)
                 .build();
