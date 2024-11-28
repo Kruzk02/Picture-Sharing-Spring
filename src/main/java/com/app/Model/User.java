@@ -21,5 +21,5 @@ public class User implements Serializable {
     private String profilePicture;
     private String bio;
     private Gender gender;
-
+    private Boolean enable;
 }
