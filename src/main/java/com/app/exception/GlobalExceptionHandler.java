@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.io.FileNotFoundException;
 import java.time.LocalDateTime;
 
 @ControllerAdvice
@@ -76,6 +75,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(FileNotSupportException.class)
     public ResponseEntity<ErrorResponse> handleFileNotSupportException(FileNotSupportException e) {
+        ErrorResponse response = new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+        return new ResponseEntity<>(response,HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(TokenExpireException.class)
+    public ResponseEntity<ErrorResponse> handleTokenExpireException(TokenExpireException e) {
         ErrorResponse response = new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
         return new ResponseEntity<>(response,HttpStatus.BAD_REQUEST);
     }
