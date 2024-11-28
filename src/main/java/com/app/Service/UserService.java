@@ -70,6 +70,7 @@ public class UserService {
                 .gender(Gender.OTHER)
                 .profilePicture(getDefaultProfilePicturePath())
                 .roles(Arrays.asList(roleDao.findByName("ROLE_USER")))
+                .enable(false)
                 .build();
 
         return userDao.register(user);
