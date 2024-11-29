@@ -1,6 +1,5 @@
 package com.app.Controller;
 
-import com.app.DTO.LoginDTO;
 import com.app.DTO.request.LoginUserRequest;
 import com.app.DTO.request.RegisterUserRequest;
 import com.app.DTO.request.UpdateUserRequest;
@@ -9,7 +8,10 @@ import com.app.DTO.response.RegisterUserResponse;
 import com.app.DTO.response.UpdateUserResponse;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.User;
+import com.app.Model.VerificationToken;
+import com.app.Service.EmailService;
 import com.app.Service.UserService;
+import com.app.Service.VerificationTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -31,7 +33,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +42,8 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final VerificationTokenService verificationTokenService;
+    private final EmailService emailService;
     private final JwtProvider jwtProvider;
 
     @Operation(summary = "Login account")
@@ -54,7 +57,7 @@ public class UserController {
     public ResponseEntity<LoginUserResponse> login(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Login Data",required = true,
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginDTO.class))
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginUserRequest.class))
         )
         @RequestBody LoginUserRequest request
             ){
@@ -76,11 +79,11 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<RegisterUserResponse> register(@RequestBody RegisterUserRequest request) throws IOException {
         User user = userService.register(request);
+        VerificationToken verificationToken = verificationTokenService.generateVerificationToken(user);
+        emailService.sendVerificationAccount(user.getEmail(), verificationToken.getToken());
         return ResponseEntity.status(HttpStatus.CREATED)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new RegisterUserResponse(
-                user.getId(), user.getUsername(), user.getEmail(),
-                user.getProfilePicture(),user.getGender())
+            .body(new RegisterUserResponse("Successfully register. Please check your email.")
             );
     }
 
@@ -130,4 +133,13 @@ public class UserController {
             ));
     }
 
+    @Operation(summary = "Verify user account")
+    @GetMapping("/verify")
+    public ResponseEntity<?> verifyAccount(@RequestParam String token) {
+        verificationTokenService.verifyAccount(token);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("Account verified successfully.");
+    }
 }
