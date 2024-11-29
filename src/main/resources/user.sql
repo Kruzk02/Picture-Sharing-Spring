@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
     profilePicture VARCHAR(255) NOT NULL ,
     bio TEXT,
     gender ENUM('male', 'female', 'other') NOT NULL,
+    enable BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

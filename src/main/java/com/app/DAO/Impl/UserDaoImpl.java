@@ -40,7 +40,7 @@ public class UserDaoImpl implements UserDao {
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.SERIALIZABLE)
     @Override
     public User register(User user) {
-        String userSql = "INSERT INTO users (username, email, password, profilePicture, gender) VALUES (?, ?, ?, ?, ?)";
+        String userSql = "INSERT INTO users (username, email, password, profilePicture, gender,enable) VALUES (?, ?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {
@@ -50,6 +50,7 @@ public class UserDaoImpl implements UserDao {
             ps.setString(3, user.getPassword());
             ps.setString(4, user.getProfilePicture());
             ps.setString(5, user.getGender().toString().toUpperCase());
+            ps.setBoolean(6, user.getEnable());
             return ps;
         }, keyHolder);
 
@@ -199,11 +200,54 @@ public class UserDaoImpl implements UserDao {
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public User update(User user) {
-        String sql = "UPDATE users SET username = ?, email = ?, password = ?, bio = ?, profilePicture = ?, gender = ? WHERE id = ?";
-        int rowsAffected = jdbcTemplate.update(sql,
-                user.getUsername(), user.getEmail(), user.getPassword(),
-                user.getBio(), user.getProfilePicture(), user.getGender().toString().toLowerCase(),
-                user.getId());
+        StringBuilder sqlBuilder = new StringBuilder("UPDATE users SET ");
+        List<Object> params = new ArrayList<>();
+
+        if (user.getUsername() != null) {
+            sqlBuilder.append("username = ?, ");
+            params.add(user.getUsername());
+        }
+
+        if (user.getEmail() != null) {
+            sqlBuilder.append("email = ?, ");
+            params.add(user.getEmail());
+        }
+
+        if (user.getPassword() != null) {
+            sqlBuilder.append("password = ?, ");
+            params.add(user.getPassword());
+        }
+
+        if (user.getBio() != null) {
+            sqlBuilder.append("bio = ?, ");
+            params.add(user.getBio());
+        }
+
+        if (user.getProfilePicture() != null) {
+            sqlBuilder.append("profilePicture = ?, ");
+            params.add(user.getProfilePicture());
+        }
+
+        if (user.getGender() != null) {
+            sqlBuilder.append("gender = ?, ");
+            params.add(user.getGender().toString().toUpperCase());
+        }
+
+        if (user.getEnable()) {
+            sqlBuilder.append("enable = ?, ");
+            params.add(user.getEnable());
+        }
+
+        if (!sqlBuilder.isEmpty()) {
+            sqlBuilder.setLength(sqlBuilder.length() - 2);
+        }
+
+        sqlBuilder.append(" WHERE id = ?");
+        params.add(user.getId());
+
+        String sql = sqlBuilder.toString();
+
+        int rowsAffected = jdbcTemplate.update(sql, params.toArray());
         if (rowsAffected > 0) {
             return findFullUserByUsername(user.getUsername());
         } else {
