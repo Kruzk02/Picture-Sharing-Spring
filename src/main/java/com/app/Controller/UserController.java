@@ -6,6 +6,7 @@ import com.app.DTO.request.UpdateUserRequest;
 import com.app.DTO.response.LoginUserResponse;
 import com.app.DTO.response.RegisterUserResponse;
 import com.app.DTO.response.UpdateUserResponse;
+import com.app.DTO.response.VerifyAccountResponse;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.User;
 import com.app.Model.VerificationToken;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -81,10 +83,11 @@ public class UserController {
         User user = userService.register(request);
         VerificationToken verificationToken = verificationTokenService.generateVerificationToken(user);
         emailService.sendVerificationAccount(user.getEmail(), verificationToken.getToken());
+
+        String token = jwtProvider.generateToken(user.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new RegisterUserResponse("Successfully register. Please check your email.")
-            );
+            .body(new RegisterUserResponse(token));
     }
 
     @Operation(summary = "Get username from token")
@@ -135,11 +138,11 @@ public class UserController {
 
     @Operation(summary = "Verify user account")
     @GetMapping("/verify")
-    public ResponseEntity<?> verifyAccount(@RequestParam String token) {
+    public ResponseEntity<VerifyAccountResponse> verifyAccount(@RequestParam String token) {
         verificationTokenService.verifyAccount(token);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body("Account verified successfully.");
+                .body(new VerifyAccountResponse("Account verified successfully."));
     }
 }
