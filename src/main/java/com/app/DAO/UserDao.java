@@ -74,4 +74,6 @@ public interface UserDao {
      * @return The user object
      */
     User update(User user);
+
+    Boolean checkAccountVerifyById(Long userId);
 }

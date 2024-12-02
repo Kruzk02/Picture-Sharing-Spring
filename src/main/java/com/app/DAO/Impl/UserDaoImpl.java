@@ -254,6 +254,19 @@ public class UserDaoImpl implements UserDao {
             return null;
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Boolean checkAccountVerifyById(Long userId) {
+        try {
+            String sql = "SELECT enable FROM users WHERE id = ?";
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> rs.getBoolean("enable"), userId);
+        } catch (EmptyResultDataAccessException e) {
+            throw new UserNotFoundException("User with ID " + userId + " does not exist.");
+        } catch (Exception e) {
+            throw new RuntimeException("An error occurred while verifying account: " + e.getMessage(), e);
+        }
+    }
 }
 
 class UserRowMapper implements RowMapper<User> {
