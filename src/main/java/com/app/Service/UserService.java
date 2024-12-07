@@ -5,14 +5,13 @@ import com.app.DAO.UserDao;
 import com.app.DTO.request.LoginUserRequest;
 import com.app.DTO.request.RegisterUserRequest;
 import com.app.DTO.request.UpdateUserRequest;
-import com.app.Model.Gender;
-import com.app.Model.User;
+import com.app.Model.*;
 import com.app.exception.sub.FileNotSupportException;
 import com.app.exception.sub.UserAlreadyExistsException;
 import com.app.exception.sub.UserNotFoundException;
+import com.app.message.producer.EmailEventProducer;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.util.Arrays;
 
 /**
@@ -43,8 +43,10 @@ public class UserService {
 
     private final UserDao userDao;
     private final RoleDao roleDao;
+    private final VerificationTokenService verificationTokenService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final EmailEventProducer emailEventProducer;
 
     /**
      * Registers a new user based on the provided registerDTO.<p>
@@ -63,7 +65,7 @@ public class UserService {
             throw new UserAlreadyExistsException("Username is already taken.");
         }
 
-        User user = User.builder()
+        User user = userDao.register(User.builder()
                 .username(request.username())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
@@ -71,9 +73,10 @@ public class UserService {
                 .profilePicture(getDefaultProfilePicturePath())
                 .roles(Arrays.asList(roleDao.findByName("ROLE_USER")))
                 .enable(false)
-                .build();
-
-        return userDao.register(user);
+                .build());
+        VerificationToken verificationToken = verificationTokenService.generateVerificationToken(user);
+        emailEventProducer.send(new VerificationEmailEvent(user.getEmail(), verificationToken.getToken(), Instant.now()));
+        return user;
     }
 
     /**
@@ -187,6 +190,10 @@ public class UserService {
                 user.setProfilePicture(getDefaultProfilePicturePath());
             }
         }
+    }
+
+    public void verifyAccount(String token) {
+        verificationTokenService.verifyAccount(token);
     }
 
     private String getDefaultProfilePicturePath() {

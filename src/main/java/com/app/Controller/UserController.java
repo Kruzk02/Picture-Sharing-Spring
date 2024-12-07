@@ -9,17 +9,13 @@ import com.app.DTO.response.UpdateUserResponse;
 import com.app.DTO.response.VerifyAccountResponse;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.User;
-import com.app.Model.VerificationToken;
-import com.app.Service.EmailService;
 import com.app.Service.UserService;
-import com.app.Service.VerificationTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -44,8 +40,6 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-    private final VerificationTokenService verificationTokenService;
-    private final EmailService emailService;
     private final JwtProvider jwtProvider;
 
     @Operation(summary = "Login account")
@@ -81,8 +75,6 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<RegisterUserResponse> register(@RequestBody RegisterUserRequest request) throws IOException {
         User user = userService.register(request);
-        VerificationToken verificationToken = verificationTokenService.generateVerificationToken(user);
-        emailService.sendVerificationAccount(user.getEmail(), verificationToken.getToken());
 
         String token = jwtProvider.generateToken(user.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -139,7 +131,7 @@ public class UserController {
     @Operation(summary = "Verify user account")
     @GetMapping("/verify")
     public ResponseEntity<VerifyAccountResponse> verifyAccount(@RequestParam String token) {
-        verificationTokenService.verifyAccount(token);
+        userService.verifyAccount(token);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
