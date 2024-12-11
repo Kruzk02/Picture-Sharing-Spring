@@ -13,6 +13,7 @@ public class Comment implements Serializable {
 
     private Long id;
     private String content;
+    private Media media;
     private Pin pin;
     private User user;
 
