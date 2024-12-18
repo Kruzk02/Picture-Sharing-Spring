@@ -51,6 +51,7 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (alreadySetup) return;
 
+        executeSqlScript("media.sql");
         executeSqlScript("user.sql");
         executeSqlScript("board.sql");
         executeSqlScript("pin.sql");
