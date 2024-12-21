@@ -28,6 +28,13 @@ public interface MediaDao {
     Media findById(Long id);
 
     /**
+     * Find a media by comment ID.
+     * @param commentId The ID of the comment
+     * @return the media if found, or exception if not found
+     */
+    Media findByCommentId(Long commentId);
+
+    /**
      * Delete a media by its ID.
      * @param id the ID of media
      * @return The number of row affected.

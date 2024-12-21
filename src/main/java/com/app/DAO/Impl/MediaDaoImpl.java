@@ -6,6 +6,7 @@ import com.app.Model.MediaType;
 import com.app.exception.sub.MediaNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -74,6 +75,27 @@ public class MediaDaoImpl implements MediaDao {
             },id);
         } catch (DataAccessException e) {
             throw new MediaNotFoundException("Media not found with a id: " + id);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
+    @Override
+    public Media findByCommentId(Long commentId) {
+        try {
+            String sql = "SELECT m.id, m.url, m.media_type FROM media m " +
+                         "INNER JOIN comments c ON m.id = c.media_id " +
+                         "WHERE c.id = ?";
+            return template.queryForObject(sql, (rs, rowNum) -> {
+                Media media = new Media();
+                media.setId(rs.getLong("id"));
+                media.setUrl(rs.getString("url"));
+                media.setMediaType(MediaType.valueOf(rs.getString("media_type")));
+                return media;
+            }, commentId);
+        } catch (EmptyResultDataAccessException e) {
+            throw new MediaNotFoundException("Media not found with comment ID: " + commentId);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid media type for comment ID: " + commentId);
         }
     }
 
