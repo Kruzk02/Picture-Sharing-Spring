@@ -53,7 +53,7 @@ public interface CommentDao {
      * @param limit The maximum number of results to return
      * @return a list of newest comments
      */
-    List<Comment> findNewestByPinId(Long pinId, int limit);
+    List<Comment> findNewestByPinId(Long pinId, int limit, int offset);
 
     /**
      * Retrieves the oldest comments for specific pin ID.
@@ -61,7 +61,7 @@ public interface CommentDao {
      * @param limit The maximum number of result to return
      * @return a list of oldest comments
      */
-    List<Comment> findOldestByPinId(Long pinId, int limit);
+    List<Comment> findOldestByPinId(Long pinId, int limit, int offset);
 
     /**
      * Deletes a comment by its id.

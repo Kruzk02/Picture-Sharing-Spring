@@ -126,7 +126,7 @@ public class CommentDaoImpl implements CommentDao {
 
     @Transactional(readOnly = true)
     @Override
-    public List<Comment> findNewestByPinId(Long pinId, int limit) {
+    public List<Comment> findNewestByPinId(Long pinId, int limit, int offset) {
         try {
             String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at DESC limit ?";
             return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false),pinId,limit);
@@ -137,7 +137,7 @@ public class CommentDaoImpl implements CommentDao {
 
     @Transactional(readOnly = true)
     @Override
-    public List<Comment> findOldestByPinId(Long pinId, int limit) {
+    public List<Comment> findOldestByPinId(Long pinId, int limit, int offset) {
         try {
             String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at ASC limit ?";
             return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false),pinId,limit);
