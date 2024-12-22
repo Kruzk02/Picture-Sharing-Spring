@@ -1,4 +1,6 @@
 package com.app.DTO.request;
 
-public record UpdatedCommentRequest(String content, long media_id) {
+import org.springframework.web.multipart.MultipartFile;
+
+public record UpdatedCommentRequest(String content, MultipartFile media) {
 }
