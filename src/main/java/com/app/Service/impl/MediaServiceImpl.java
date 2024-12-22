@@ -1,118 +1,50 @@
 package com.app.Service.impl;
 
 import com.app.DAO.MediaDao;
-import com.app.DTO.request.CreateMediaRequest;
-import com.app.DTO.request.UpdatedMediaRequest;
 import com.app.Model.Media;
-import com.app.Model.MediaType;
 import com.app.Service.MediaService;
-import com.app.exception.sub.MediaNotFoundException;
-import com.app.exception.sub.MediaNotSupportException;
 import lombok.AllArgsConstructor;
-import org.apache.commons.lang3.RandomStringUtils;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.Objects;
-import java.util.UUID;
+import java.time.Duration;
 
+@Log4j2
 @AllArgsConstructor
 @Service
 public class MediaServiceImpl implements MediaService {
 
     private final MediaDao mediaDao;
-
-    @Override
-    public Media save(CreateMediaRequest request) {
-         String originFilename = request.file().getOriginalFilename();
-         if (originFilename == null) {
-             throw new IllegalArgumentException("Filename cannot be null");
-         }
-
-         if (!MediaType.IMAGE.isFormatValid(originFilename) && !MediaType.VIDEO.isFormatValid(originFilename)) {
-             throw new MediaNotSupportException("Media format not supported");
-         }
-
-         int lastDotOfIndex = originFilename.lastIndexOf(".");
-         String extension = "";
-
-         if (lastDotOfIndex != 1){
-             extension = originFilename.substring(lastDotOfIndex).replaceAll("[(){}]", "");
-         }
-         String filename = UUID.fromString(originFilename + LocalDateTime.now()) + extension;
-         filename = filename + extension.replaceAll("[(){}]", "");
-
-         MediaType mediaType = MediaType.getByExtension(extension);
-         if (mediaType == null) {
-             throw new MediaNotSupportException("Media not supported");
-         }
-
-        return Media
-                .builder()
-                .url(filename)
-                .mediaType(mediaType)
-                .build();
-    }
-
-    @Override
-    public Media update(Long id, UpdatedMediaRequest request) {
-        Media existingMedia = mediaDao.findById(id);
-        if (existingMedia == null) {
-            throw new MediaNotFoundException("Media not found with a id: " + id);
-        }
-
-        String originFilename = request.file().getOriginalFilename();
-
-        if (originFilename == null) {
-            throw new IllegalArgumentException("Filename cannot be null");
-        }
-
-        if (!MediaType.IMAGE.isFormatValid(originFilename) && !MediaType.VIDEO.isFormatValid(originFilename)) {
-            throw new MediaNotSupportException("Media format not supported");
-        }
-
-        int lastDotOfIndex = originFilename.lastIndexOf(".");
-        String extension = "";
-
-        if (lastDotOfIndex != 1) {
-            extension = originFilename.substring(lastDotOfIndex).replaceAll("[(){}]", "");
-        }
-
-        String filename = UUID.fromString(originFilename + LocalDateTime.now()) + extension;
-        filename = filename + extension.replaceAll("[(){}]", "");
-
-        MediaType mediaType = MediaType.getByExtension(extension);
-        if (mediaType == null) {
-            throw new MediaNotSupportException("Unsupported media type");
-        }
-
-        return Media
-                .builder()
-                .id(existingMedia.getId())
-                .url(filename)
-                .mediaType(mediaType)
-                .created_at(existingMedia.getCreated_at())
-                .build();
-    }
+    private final RedisTemplate<Object, Object> redisTemplate;
 
     @Override
     public Media findById(Long id) {
-        return mediaDao.findById(id);
+        Media cacheMedia = (Media) redisTemplate.opsForValue().get("media: " + id);
+        if (cacheMedia != null && cacheMedia.getUrl() != null) {
+            log.info("Cache hit for media with id {}", id);
+            return cacheMedia;
+        }
+        log.info("Cache miss for media with id {}", id);
+        Media media = mediaDao.findById(id);
+        if (media != null) {
+            redisTemplate.opsForValue().set("media: " + id, media, Duration.ofHours(1));
+        }
+        return media;
     }
 
     @Override
     public Media findByCommentId(Long commentId) {
-        return mediaDao.findByCommentId(commentId);
-    }
-
-    @Override
-    public void deleteById(Long id) {
-        Media existingMedia = mediaDao.findById(id);
-        if (existingMedia != null) {
-            mediaDao.deleteById(id);
+        Media cacheMedia = (Media) redisTemplate.opsForValue().get("media_commentId: " + commentId);
+        if (cacheMedia != null && cacheMedia.getUrl() != null) {
+            log.info("Cache hit for media with comment id {}", commentId);
+            return cacheMedia;
         }
+        log.info("Cache miss for media with comment id {}", commentId);
+        Media media = mediaDao.findByCommentId(commentId);
+        if (media != null) {
+            redisTemplate.opsForValue().set("media_commentId: " + commentId, media, Duration.ofHours(1));
+        }
+        return media;
     }
 }
