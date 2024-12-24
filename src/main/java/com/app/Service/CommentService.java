@@ -1,47 +1,19 @@
 package com.app.Service;
 
-import com.app.DAO.Impl.CommentDaoImpl;
-import com.app.DAO.PinDao;
-import com.app.DAO.UserDao;
 import com.app.DTO.request.CreateCommentRequest;
+import com.app.DTO.request.UpdatedCommentRequest;
 import com.app.Model.Comment;
-import com.app.Model.User;
-import com.app.exception.sub.UserNotMatchException;
-import lombok.AllArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
 
-import java.util.Objects;
+import java.util.List;
 
-@Service
-@AllArgsConstructor
-public class CommentService {
-
-    private final CommentDaoImpl commentDao;
-    private final PinDao pinDao;
-    private final UserDao userDao;
-
-    public Comment save(CreateCommentRequest request){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        Comment comment = Comment.builder()
-                .content(request.content())
-                .pin(pinDao.findById(request.pinId()))
-                .user(userDao.findUserByUsername(authentication.getName()))
-                .build();
-        return commentDao.save(comment);
-    }
-
-    public void delete(Long id){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userDao.findUserByUsername(authentication.getName());
-
-        Comment comment = commentDao.findById(id);
-        if(comment != null && Objects.equals(user.getId(),comment.getUser().getId())){
-            commentDao.deleteById(comment.getId());
-        } else {
-            throw new UserNotMatchException("User does not match with a comment");
-        }
-    }
+public interface CommentService {
+    Comment save(CreateCommentRequest request);
+    Comment update(Long id, UpdatedCommentRequest request);
+    Comment findBasicById(Long id);
+    Comment findDetailsById(Long id);
+    List<Comment> findByPinId(Long pinId, int limit, int offset);
+    List<Comment> findNewestByPinId(Long pinId, int limit, int offset);
+    List<Comment> findOldestByPinId(Long pinId, int limit, int offset);
+    void deleteById(Long id);
+    void deleteByPinId(Long pinId);
 }

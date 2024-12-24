@@ -3,7 +3,9 @@ CREATE TABLE IF NOT EXISTS comments (
     content TEXT,
     user_id INT,
     pin_id INT,
-    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    media_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (pin_id) REFERENCES pins(id) ON DELETE CASCADE
+    FOREIGN KEY (pin_id) REFERENCES pins(id) ON DELETE CASCADE,
+    FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE CASCADE
 );

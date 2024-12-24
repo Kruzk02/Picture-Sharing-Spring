@@ -37,8 +37,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(FileNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleFileNotFoundException(FileNotFoundException ex) {
+    @ExceptionHandler(MediaNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleMediaNotFoundException(MediaNotFoundException ex) {
         ErrorResponse response = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
@@ -73,14 +73,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(response,HttpStatus.CONFLICT);
     }
 
-    @ExceptionHandler(FileNotSupportException.class)
-    public ResponseEntity<ErrorResponse> handleFileNotSupportException(FileNotSupportException e) {
+    @ExceptionHandler(MediaNotSupportException.class)
+    public ResponseEntity<ErrorResponse> handleMediaNotSupportException(MediaNotSupportException e) {
         ErrorResponse response = new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
         return new ResponseEntity<>(response,HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(TokenExpireException.class)
     public ResponseEntity<ErrorResponse> handleTokenExpireException(TokenExpireException e) {
+        ErrorResponse response = new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
+        return new ResponseEntity<>(response,HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(CommentIsEmptyException.class)
+    public ResponseEntity<ErrorResponse> handleCommentIsEmptyException(CommentIsEmptyException e) {
         ErrorResponse response = new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value(), LocalDateTime.now());
         return new ResponseEntity<>(response,HttpStatus.BAD_REQUEST);
     }
