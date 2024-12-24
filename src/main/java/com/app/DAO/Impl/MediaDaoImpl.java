@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -17,8 +16,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Objects;
 
@@ -57,7 +54,7 @@ public class MediaDaoImpl implements MediaDao {
     @Override
     public Media update(Long id, Media media) {
         String sql = "UPDATE media SET url = ?, media_type = ? WHERE id = ?";
-        int rowAffected = template.update(sql, media.getUrl(), media.getMediaType());
+        int rowAffected = template.update(sql, media.getUrl(), media.getMediaType().toString(), id);
         return rowAffected > 0 ? media : null;
     }
 
