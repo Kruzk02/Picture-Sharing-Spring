@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -53,10 +54,9 @@ public class CommentServiceImpl implements CommentService {
         String extension = mediaUtils.getFileExtension(request.media().getOriginalFilename());
 
         fileUtils.save(request.media(), filename, extension);
-
         Media media = mediaDao.save(Media.builder()
                 .url(filename)
-                .mediaType(MediaType.getByExtension(extension))
+                .mediaType(MediaType.fromExtension(extension))
                 .build());
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -72,7 +72,6 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public Comment update(Long id, UpdatedCommentRequest request) {
         Comment comment = commentDao.findDetailsById(id);
-
         if (comment == null) {
             throw new CommentNotFoundException("Comment not found with a id: " + id);
         }
@@ -81,28 +80,29 @@ public class CommentServiceImpl implements CommentService {
             throw new UserNotMatchException("User not matching with a comment");
         }
 
-        if ((request.content() == null || request.content().trim().isEmpty()) && request.media().isEmpty()) {
+        if ((request.content() == null || request.content().trim().isEmpty()) && (request.media().isEmpty() || request.media().isEmpty())) {
             throw new CommentIsEmptyException("A comment must have either content or a media attachment.");
         }
 
         if (request.media() != null && !request.media().isEmpty()) {
-            Media media = mediaDao.findByCommentId(comment.getId());
-            String extension = mediaUtils.getFileExtension(media.getUrl());
-            fileUtils.delete(media.getUrl(), extension);
+            Media existingMedia = mediaDao.findByCommentId(comment.getId());
+            String extensionOfExistingMedia = mediaUtils.getFileExtension(existingMedia.getUrl());
+
+            String filename = mediaUtils.generateUniqueFilename(request.media().getOriginalFilename());
+            String extension = mediaUtils.getFileExtension(request.media().getOriginalFilename());
+
+            CompletableFuture.runAsync(() -> fileUtils.delete(existingMedia.getUrl(), extensionOfExistingMedia))
+                    .thenRunAsync(() -> fileUtils.save(request.media(), filename, extension));
+
+            mediaDao.update(comment.getMediaId(), Media.builder()
+                    .url(filename)
+                    .mediaType(MediaType.fromExtension(extension))
+                    .build());
         }
 
-        String filename = mediaUtils.generateUniqueFilename(Objects.requireNonNull(request.media()).getOriginalFilename());
-        String extension = mediaUtils.getFileExtension(request.media().getOriginalFilename());
-
-        fileUtils.save(request.media(), filename, extension);
-
-        Media media = mediaDao.save(Media.builder()
-                .url(filename)
-                .mediaType(MediaType.getByExtension(extension))
-                .build());
-
-        comment.setContent(request.content());
-        comment.setMediaId(media.getId());
+        if (request.content() != null && !request.content().trim().isEmpty()) {
+            comment.setContent(request.content());
+        }
 
         return commentDao.update(id, comment);
     }
