@@ -131,12 +131,21 @@ public class UserService {
         return userDao.findUserByEmail(email);
     }
 
+    /**
+     * Retrieves a user details by username.
+     * @param username The username of the user to retrieve.
+     * @return The User entity corresponding to the provided username.
+     */
+    public User findFullUserByUsername(String username) {
+        return userDao.findFullUserByUsername(username);
+    }
+
     public String findUserProfilePictureByUsername(String username) {
         return userDao.findUserProfilePictureByUsername(username);
     }
 
     public User update(UpdateUserRequest request, String username, MultipartFile profilePicture) throws IOException {
-        User user = userDao.findFullUserByUsername(username);
+        User user = this.findFullUserByUsername(username);
 
         if (user == null) {
             throw new UserNotFoundException("User not found with a username: " + username);
