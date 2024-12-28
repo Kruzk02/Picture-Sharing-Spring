@@ -5,7 +5,7 @@ import com.app.DTO.request.RegisterUserRequest;
 import com.app.DTO.request.UpdateUserRequest;
 import com.app.DTO.response.LoginUserResponse;
 import com.app.DTO.response.RegisterUserResponse;
-import com.app.DTO.response.UpdateUserResponse;
+import com.app.DTO.response.UserResponse;
 import com.app.DTO.response.VerifyAccountResponse;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.User;
@@ -113,7 +113,7 @@ public class UserController {
 
     @Operation(summary = "Update user info")
     @PutMapping("/update-user")
-    public ResponseEntity<UpdateUserResponse> updateUser(
+    public ResponseEntity<UserResponse> updateUser(
             @ModelAttribute UpdateUserRequest request,
             @Nullable @RequestPart("profilePicture") MultipartFile profilePicture) throws IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -122,10 +122,23 @@ public class UserController {
         User user = userService.update(request,username,profilePicture);
         return ResponseEntity.status(HttpStatus.OK)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new UpdateUserResponse(
+            .body(new UserResponse(
                 user.getId(),user.getUsername(),user.getEmail(),
-                user.getProfilePicture(),user.getBio(),user.getGender()
+                user.getProfilePicture(), user.getPassword(), user.getBio(), user.getGender()
             ));
+    }
+
+    @GetMapping("/user-details")
+    public ResponseEntity<UserResponse> getFullUserDetails() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = userService.findFullUserByUsername(authentication.getName());
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new UserResponse(
+                        user.getId(),user.getUsername(),user.getEmail(),
+                        user.getProfilePicture(), user.getPassword(), user.getBio(), user.getGender()
+                ));
     }
 
     @Operation(summary = "Verify user account")
