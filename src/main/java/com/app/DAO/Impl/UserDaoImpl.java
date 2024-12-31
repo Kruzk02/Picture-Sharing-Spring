@@ -233,7 +233,7 @@ public class UserDaoImpl implements UserDao {
             params.add(user.getGender().toString().toUpperCase());
         }
 
-        if (user.getEnable()) {
+        if (user.getEnable() != null) {
             sqlBuilder.append("enable = ?, ");
             params.add(user.getEnable());
         }
