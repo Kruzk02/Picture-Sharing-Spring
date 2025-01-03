@@ -13,7 +13,7 @@ public class Pin implements Serializable {
 
     private Long id;
     private Long userId;
-    private String fileName;
-    private String image_url;
     private String description;
+    private Long mediaId;
+
 }
