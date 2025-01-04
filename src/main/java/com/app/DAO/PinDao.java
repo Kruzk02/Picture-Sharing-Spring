@@ -23,13 +23,44 @@ public interface PinDao {
      */
     Pin save(Pin pin);
 
+    Pin update(Long id, Pin pin);
     /**
-     * Finds a pin by its id.
+     * Finds a basic detail pin by its id.
      *
      * @param id The id of the pin to be found.
      * @return The pin object if found, otherwise null.
      */
-    Pin findById(Long id);
+    Pin findBasicById(Long id);
+
+    /**
+     * Find a full detail pin by its id.
+     *
+     * @param id The id of the pin to be found.
+     * @return The pin object if found, otherwise throw exception.
+     */
+    Pin findFullById(Long id);
+
+    /**
+     * Find the newest pin.
+     * @param limit The maximum number of results to return
+     * @return a list of newest pin.
+     */
+    List<Pin> findNewestPin(int limit, int offset);
+
+    /**
+     * Find the oldest pin.
+     * @param limit The maximum number of result to return
+     * @return a list of oldest pin.
+     */
+    List<Pin> findOldestPin(int limit, int offset);
+
+    /**
+     * Find the pin that associated with a user id.
+     * @param userId The id of user.
+     * @param limit The maximum number of result to return
+     * @return a list of pin.
+     */
+    List<Pin> findPinByUserId(Long userId, int limit, int offset);
 
     /**
      * Find a user id by pin id
