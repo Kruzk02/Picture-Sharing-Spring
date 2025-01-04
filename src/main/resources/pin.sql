@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS pins (
     user_id int,
     description text,
     media_id int,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN kEY (media_id) REFERENCES media(id) ON DELETE CASCADE
 );

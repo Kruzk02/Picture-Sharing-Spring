@@ -3,6 +3,7 @@ package com.app.Model;
 import lombok.*;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,5 +16,6 @@ public class Pin implements Serializable {
     private Long userId;
     private String description;
     private Long mediaId;
+    private Timestamp createdAt;
 
 }
