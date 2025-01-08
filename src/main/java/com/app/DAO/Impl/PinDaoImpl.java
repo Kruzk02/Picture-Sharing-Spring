@@ -6,6 +6,7 @@ import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -39,7 +40,7 @@ public class PinDaoImpl implements PinDao {
     @Transactional(readOnly = true)
     @Override
     public List<Pin> getAllPins(int offset) {
-        String sql = "SELECT id, user_id, media_url FROM pins LIMIT 5 OFFSET ?";
+        String sql = "SELECT id, user_id, media_id, created_at FROM pins LIMIT 5 OFFSET ?";
         return jdbcTemplate.query(sql, new PinRowMapper(false, true), offset);
     }
 
@@ -103,7 +104,7 @@ public class PinDaoImpl implements PinDao {
     @Override
     public Pin findBasicById(Long id) {
         try{
-            String sql = "SELECT id, media_id, user_id, create_at FROM pins where id = ?";
+            String sql = "SELECT id, media_id, user_id, created_at FROM pins where id = ?";
             return jdbcTemplate.queryForObject(sql, new PinRowMapper(false, true),id);
         }catch (DataAccessException e){
             throw new PinNotFoundException("Pin not found with a id: " + id);
@@ -125,7 +126,7 @@ public class PinDaoImpl implements PinDao {
     @Override
     public List<Pin> findNewestPin(int limit, int offset) {
         try {
-            String sql = "SELECT id, user_id, media_id, create_at FROM pins ORDER BY create_at DESC limit ? offset ?";
+            String sql = "SELECT id, user_id, media_id, created_at FROM pins ORDER BY created_at DESC limit ? offset ?";
             return jdbcTemplate.query(sql, new PinRowMapper(false, true), limit, offset);
         } catch (DataAccessException e) {
             throw new PinNotFoundException("Pin not found");
@@ -136,7 +137,7 @@ public class PinDaoImpl implements PinDao {
     @Override
     public List<Pin> findOldestPin(int limit, int offset) {
         try {
-            String sql = "SELECT id, user_id, media_id, create_at FROM pins ORDER BY create_at ASC limit ? offset ?";
+            String sql = "SELECT id, user_id, media_id, created_at FROM pins ORDER BY created_at ASC limit ? offset ?";
             return jdbcTemplate.query(sql, new PinRowMapper(false, true), limit, offset);
         } catch (DataAccessException e) {
             throw new PinNotFoundException("Pin not found");
@@ -147,8 +148,8 @@ public class PinDaoImpl implements PinDao {
     @Override
     public List<Pin> findPinByUserId(Long userId, int limit, int offset) {
         try {
-            String sql = "SELECT id, media_id, create_at FROM pins WHERE user_id = ? ORDER BY create_at DESC limit ? offset ?";
-            return jdbcTemplate.query(sql, new PinRowMapper(false, true), limit, offset);
+            String sql = "SELECT id, user_id, media_id, created_at FROM pins WHERE user_id = ? ORDER BY created_at DESC limit ? offset ?\n";
+            return jdbcTemplate.query(sql, new PinRowMapper(false, true), userId, limit, offset);
         } catch (DataAccessException e) {
             throw new UserNotFoundException("User not found with a id: " + userId);
         }
@@ -158,7 +159,7 @@ public class PinDaoImpl implements PinDao {
     @Override
     public Pin findUserIdByPinId(Long pinId) {
         try {
-            String sql = "SELECT id, user_id, create_at FROM pins where id = ?";
+            String sql = "SELECT id, user_id, created_at FROM pins where id = ?";
             return jdbcTemplate.queryForObject(sql, new PinRowMapper(false, false),pinId);
         } catch (DataAccessException e) {
             throw new PinNotFoundException("Pin not found with a id: " + pinId);
@@ -202,7 +203,7 @@ class PinRowMapper implements RowMapper<Pin> {
         }
 
         pin.setUserId(rs.getLong("user_id"));
-        pin.setCreatedAt(rs.getTimestamp("create_at"));
+        pin.setCreatedAt(rs.getTimestamp("created_at"));
         return pin;
     }
 }
