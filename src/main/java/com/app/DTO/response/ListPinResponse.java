@@ -4,4 +4,4 @@ import com.app.Model.Pin;
 
 import java.util.List;
 
-public record GetAllPinResponse(List<Pin> pins) { }
+public record ListPinResponse(List<Pin> pins) { }
