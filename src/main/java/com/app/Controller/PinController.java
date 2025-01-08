@@ -1,53 +1,41 @@
 package com.app.Controller;
 
-import com.app.DTO.request.UploadPinRequest;
-import com.app.DTO.response.GetAllPinResponse;
-import com.app.DTO.response.GetCommentResponse;
-import com.app.DTO.response.GetPinResponse;
-import com.app.DTO.response.UploadPinResponse;
+import com.app.DTO.request.PinRequest;
+import com.app.DTO.response.*;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
-import com.app.Model.User;
+import com.app.Model.SortType;
+import com.app.Service.CommentService;
 import com.app.Service.PinService;
-import com.app.Service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.constraints.Min;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/pin")
+@AllArgsConstructor
 public class PinController {
 
     private final PinService pinService;
-    private final UserService userService;
+    private final CommentService commentService;
 
-    @Autowired
-    public PinController(PinService pinService, UserService userService) {
-        this.pinService = pinService;
-        this.userService = userService;
+    private List<Pin> findAllPinHelper(int limit, int offset, SortType sortType) {
+        return switch (sortType) {
+            case NEWEST -> pinService.findNewestPin(limit, offset);
+            case OLDEST -> pinService.findOldestPin(limit, offset);
+            default -> pinService.getAllPins(offset);
+        };
     }
 
     @Operation(summary = "Get all Pins")
@@ -58,14 +46,53 @@ public class PinController {
             content = @Content(mediaType = "application/json"))
     })
     @GetMapping
-    public ResponseEntity<GetAllPinResponse> getAllPins(
-        @Parameter(description = "Pagination offset for the results")
-        @RequestParam(value = "offset", defaultValue = "0") @Min(0) int offset
+    public ResponseEntity<List<PinResponse>> getAllPins(
+        @Parameter(description = "Sorting type for pins: NEWEST, OLDEST or DEFAULT")
+        @RequestParam(defaultValue = "DEFAULT") SortType sortType,
+        @Parameter(description = "Maximum number of pins to be retrieved")
+        @RequestParam(defaultValue = "10") int limit,
+        @Parameter(description = "Offset for pagination, indicating the starting point")
+        @RequestParam(defaultValue = "0") int offset
     ) {
-        List<Pin> pins = pinService.getAllPins(offset);
+        if (limit <= 0 || offset < 0) {
+            throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
+        }
+
+        List<Pin> pins = findAllPinHelper(limit, offset, sortType);
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new GetAllPinResponse(pins));
+                .body(pins.stream().map(pin ->
+                        new PinResponse(
+                                pin.getId(),
+                                pin.getUserId(),
+                                pin.getDescription(),
+                                pin.getMediaId(),
+                                pin.getCreatedAt()
+                        )).toList()
+                );
+    }
+
+    @GetMapping("/{userId}/user")
+    public ResponseEntity<List<PinResponse>> findPinByUserId(
+        @Parameter(description = "id of the user whose pin are to be retrieved", required = true)
+        @PathVariable Long userId,
+        @Parameter(description = "Maximum number of pins to be retrieved")
+        @RequestParam(defaultValue = "10") int limit,
+        @Parameter(description = "Offset for pagination, indicating the starting point")
+        @RequestParam(defaultValue = "0") int offset
+    ) {
+        List<Pin> pins = pinService.findPinByUserId(userId, limit, offset);
+        return ResponseEntity.status(HttpStatus.OK)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(pins.stream().map(pin ->
+                new PinResponse(
+                    pin.getId(),
+                    pin.getUserId(),
+                    pin.getDescription(),
+                    pin.getMediaId(),
+                    pin.getCreatedAt()
+                )).toList()
+            );
     }
 
     @Operation(summary = "Upload a pin")
@@ -82,48 +109,22 @@ public class PinController {
             content = @Content(mediaType = "application/json"))
     })
     @PostMapping("/upload")
-    public ResponseEntity<UploadPinResponse> upload(
-            @ModelAttribute UploadPinRequest request,
-            @Parameter(description = "File to upload")
-            @RequestPart("file") MultipartFile file
-    ) throws IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userService.findUserByUsername(authentication.getName());
-        pinService.asyncData(user.getId(), request, file);
+    public ResponseEntity<PinResponse> upload(
+            @ModelAttribute PinRequest request
+    ) {
+        Pin pin = pinService.save(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new UploadPinResponse("Your pin is being processing"));
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new PinResponse(
+                pin.getId(),
+                pin.getUserId(),
+                pin.getDescription(),
+                pin.getMediaId(),
+                pin.getCreatedAt()
+            ));
     }
 
-    @Operation(summary = "Download the pin with specified by the ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully downloaded the pin",
-            content = @Content(mediaType = "application/octet-stream",schema =  @Schema(implementation = InputStreamResource.class))),
-        @ApiResponse(responseCode = "404", description = "Pin not found",
-            content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "500", description = "Internal server error",
-            content = @Content(mediaType = "application/json"))
-    })
-    @GetMapping("/download/{id}")
-    public ResponseEntity<InputStreamResource> download(
-        @Parameter(description = "Id of the pin to be downloaded", required = true) @PathVariable Long id
-    )throws IOException {
-
-        Pin pin = pinService.findById(id);
-        Path filePath = Paths.get(pin.getImage_url());
-        InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + pin.getFileName());
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .contentLength(Files.size(filePath))
-                .body(resource);
-    }
-
-    @Operation(summary = "Fetch a pin by its ID")
+    @Operation(summary = "Fetch a basic pin detail by its ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Found the pin",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Pin.class))),
@@ -132,14 +133,38 @@ public class PinController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<GetPinResponse> getPinById(
+    public ResponseEntity<PinResponse> getPinById(
         @Parameter(description = "id of the pin to be searched", required = true)
-        @PathVariable Long id
+        @PathVariable Long id, @RequestParam(defaultValue = "basic") String view
     ){
-        Pin pin = pinService.findById(id);
+        Pin pin;
+        if ("detail".equalsIgnoreCase(view)) {
+            pin = pinService.findFullById(id);
+        } else {
+            pin = pinService.findBasicById(id);
+        }
+
+        if (pin == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON).build();
+        }
+
         return ResponseEntity.status(HttpStatus.OK)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new GetPinResponse(pin.getUserId(),pin.getImage_url(),pin.getDescription()));
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new PinResponse(
+                pin.getId(),
+                pin.getUserId(),
+                pin.getDescription(),
+                pin.getMediaId(),
+                pin.getCreatedAt()
+            ));
+    }
+
+    private List<Comment> findCommentByPinIdHelper(Long pinId, int limit, int offset, SortType sortType) {
+        return switch (sortType) {
+            case NEWEST -> commentService.findNewestByPinId(pinId, limit, offset);
+            case OLDEST -> commentService.findOldestByPinId(pinId, limit, offset);
+            default -> commentService.findByPinId(pinId, limit, offset);
+        };
     }
 
     @Operation(summary = "Find all comment by pin id")
@@ -150,41 +175,36 @@ public class PinController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}/comment")
-    public ResponseEntity<GetCommentResponse> getAllCommentByPinId(
-        @Parameter(description = "id of the pin to be searched", required = true)
-        @PathVariable Long id
+    public ResponseEntity<List<CommentResponse>> getAllCommentByPinId(
+        @Parameter(description = "id of the pin whose comment are to be retrieved", required = true)
+        @PathVariable Long id,
+        @Parameter(description = "Sorting type for comments: NEWEST, OLDEST or DEFAULT")
+        @RequestParam(defaultValue = "DEFAULT") SortType sortType,
+        @Parameter(description = "Maximum number of comments to be retrieved")
+        @RequestParam(defaultValue = "10") int limit,
+        @Parameter(description = "Offset for pagination, indicating the starting point")
+        @RequestParam(defaultValue = "0") int offset
     ){
-        List<Comment> comments = pinService.getAllCommentByPinId(id);
-        return ResponseEntity.status(HttpStatus.OK)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new GetCommentResponse(comments));
-    }
-
-    @Operation(summary = "Get a pin photo by pin id")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Found pin photo",
-            content = @Content(mediaType = "application/octet-stream", schema = @Schema(implementation = Resource.class))),
-        @ApiResponse(responseCode = "404", description = "Pin not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/{id}/photo")
-    public ResponseEntity<Resource> getPhotoByPinId(
-        @Parameter(description = "Id of the pin photo to be search", required = true)
-        @PathVariable Long id
-    ) throws IOException {
-        Pin pin = pinService.findById(id);
-        Path filePath = Paths.get("upload/" + pin.getFileName());
-
-        String mimeType = Files.probeContentType(filePath);
-        if (mimeType == null) {
-            mimeType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        if (limit <= 0 || offset < 0) {
+            throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
         }
 
-        Resource resource = new FileSystemResource(filePath);
+        List<Comment> comments = findCommentByPinIdHelper(id, limit, offset, sortType);
+        if (comments.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(mimeType))
-                .body(resource);
+        return ResponseEntity.status(HttpStatus.OK)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(comments.stream().map(comment ->
+                new CommentResponse(
+                    comment.getId(),
+                    comment.getContent(),
+                    comment.getPinId(),
+                    comment.getUserId(),
+                    comment.getMediaId()))
+                .toList()
+            );
     }
 
     @Operation(summary = "Delete an pin by its id")
@@ -195,9 +215,7 @@ public class PinController {
     })
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<Void> deletePinById(@PathVariable Long id) throws IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userService.findUserByUsername(authentication.getName());
-        pinService.deleteIfUserMatches(user,id);
+        pinService.delete(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .build();
