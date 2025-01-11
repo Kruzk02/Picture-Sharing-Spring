@@ -1,8 +1,8 @@
 package com.app.utils;
 
-import com.app.Model.Media;
 import com.app.Model.MediaType;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,8 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Log4j2
@@ -59,6 +57,7 @@ public class FileUtils {
      * @return A CompletableFuture that runs the save operation asynchronously.
      * @throws IllegalArgumentException If any of the input parameters are null.
      */
+    @Async
     public CompletableFuture<Void> save(MultipartFile file, String filename, String extension) {
         if (file == null || filename == null || extension == null) {
             throw new IllegalArgumentException("File, filename, and extension must not be null.");
@@ -87,6 +86,7 @@ public class FileUtils {
      * @return A CompletableFuture that runs the delete operation asynchronously.
      * @throws IllegalArgumentException If any of the input parameters are null.
      */
+    @Async
     public CompletableFuture<Void> delete(String filename, String extension) {
         if (filename == null || extension == null) {
             throw new IllegalArgumentException("File, filename, and extension must not be null.");
