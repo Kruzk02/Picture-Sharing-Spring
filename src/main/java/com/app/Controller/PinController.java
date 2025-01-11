@@ -124,6 +124,31 @@ public class PinController {
             ));
     }
 
+    @Operation(description = "Update an existing pin")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Success update an pin",
+            content = {@Content(mediaType = "application/json", schema = @Schema(implementation = PinResponse.class))}),
+        @ApiResponse(responseCode = "404", description = "Pin not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid Input"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<PinResponse> update(
+        @PathVariable Long id,
+        @ModelAttribute PinRequest request
+    ) {
+        Pin pin = pinService.update(id, request);
+        return ResponseEntity.status(HttpStatus.OK)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new PinResponse(
+                pin.getId(),
+                pin.getUserId(),
+                pin.getDescription(),
+                pin.getMediaId(),
+                pin.getCreatedAt())
+            );
+    }
+
     @Operation(summary = "Fetch a basic pin detail by its ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Found the pin",
