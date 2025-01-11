@@ -90,10 +90,6 @@ public class PinServiceImpl implements PinService {
 
     @Override
     public Pin update(Long id, PinRequest pinRequest) {
-        if (pinRequest.file().isEmpty()) {
-            throw new PinIsEmptyException("A pin must have file");
-        }
-
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Pin existingPin = pinDao.findFullById(id);
 
@@ -107,24 +103,23 @@ public class PinServiceImpl implements PinService {
             throw new UserNotMatchException("User does not matching with a pin owner");
         }
 
-        Media existingMedia = mediaDao.findById(existingPin.getMediaId());
+        if (pinRequest.file() != null && !pinRequest.file().isEmpty()) {
+            Media existingMedia = mediaDao.findById(existingPin.getMediaId());
+            String extensionOfExistingMedia = mediaUtils.getFileExtension(existingMedia.getUrl());
 
-        if (existingMedia != null) {
-            fileUtils.delete(existingMedia.getUrl(), existingMedia.getMediaType().toString())
-                    .thenAcceptAsync(unused -> mediaDao.deleteById(existingMedia.getId()));
+            String filename = mediaUtils.generateUniqueFilename(pinRequest.file().getOriginalFilename());
+            String extension = mediaUtils.getFileExtension(pinRequest.file().getOriginalFilename());
+
+            CompletableFuture.runAsync(() -> fileUtils.delete(existingMedia.getUrl(), extensionOfExistingMedia))
+                    .thenRunAsync(() -> fileUtils.save(pinRequest.file(), filename, extension));
+
+            mediaDao.update(existingPin.getMediaId(), Media.builder()
+                    .url(filename)
+                    .mediaType(MediaType.fromExtension(extension))
+                    .build());
         }
 
-        String filename = mediaUtils.generateUniqueFilename(pinRequest.file().getOriginalFilename());
-        String extension = mediaUtils.getFileExtension(pinRequest.file().getOriginalFilename());
-
-        fileUtils.save(pinRequest.file(), filename, extension);
-        Media media = mediaDao.save(Media.builder()
-                .url(filename)
-                .mediaType(MediaType.fromExtension(extension))
-                .build());
-
-        existingPin.setMediaId(media.getId());
-        existingPin.setDescription(pinRequest.description() != null ? pinRequest.description() : existingPin.getDescription());
+        existingPin.setDescription(pinRequest.description() != null? pinRequest.description() : existingPin.getDescription());
 
         return pinDao.update(id, existingPin);
     }
