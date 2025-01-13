@@ -14,9 +14,11 @@ import java.sql.Timestamp;
 @Builder
 public class SubComment implements Serializable {
 
-    private Long id;
+    private long id;
     private String content;
     private Comment comment;
     private User user;
-    private Timestamp timestamp;
+    private Media media;
+    private Timestamp createAt;
+
 }
