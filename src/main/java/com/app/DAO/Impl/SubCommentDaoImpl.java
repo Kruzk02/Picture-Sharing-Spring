@@ -13,11 +13,14 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -28,10 +31,10 @@ public class SubCommentDaoImpl implements SubCommentDao {
     private final JdbcTemplate template;
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     public SubComment save(SubComment subComment) {
         try {
-            String sql = "INSERT INTO sub_comments (content, user_id, comment_id) VALUES(?,?,?)";
+            String sql = "INSERT INTO sub_comments (content, user_id, comment_id, media_id) VALUES(?,?,?,?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
             int row = template.update(con -> {
@@ -39,7 +42,7 @@ public class SubCommentDaoImpl implements SubCommentDao {
                 ps.setString(1,subComment.getContent());
                 ps.setLong(2,subComment.getUser().getId());
                 ps.setLong(3,subComment.getComment().getId());
-
+                ps.setLong(4, subComment.getMedia().getId());
                 return ps;
             },keyHolder);
 
@@ -52,15 +55,69 @@ public class SubCommentDaoImpl implements SubCommentDao {
         }
     }
 
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
+    @Override
+    public SubComment update(Long id, SubComment subComment) {
+        StringBuilder sb = new StringBuilder("UPDATE sub_comments SET ");
+        List<Object> params = new ArrayList<>();
+
+        if (subComment.getContent() != null) {
+            sb.append("content = ?, ");
+            params.add(subComment.getContent());
+        }
+
+        if (subComment.getMedia().getId() != 0) {
+            sb.append("media_id = ?, ");
+            params.add(subComment.getMedia().getId());
+        }
+
+        if (params.isEmpty()) {
+            throw new IllegalArgumentException("No fields to update");
+        }
+
+        if (!sb.isEmpty()) {
+            sb.setLength(sb.length() - 2);
+        }
+
+        sb.append(" WHERE id = ?");
+        params.add(id);
+
+        String sql = sb.toString();
+        int rowAffected = template.update(sql, params.toArray());
+        return rowAffected > 0 ? subComment : null;
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<SubComment> findAllByCommentId(Long commentId) {
-        String sql = "SELECT sc.*, u.username, u.email, c.content AS comment_content " +
+    public List<SubComment> findAllByCommentId(Long commentId, int limit, int offset) {
+        String sql = "SELECT sc.id, sc.content, sc.create_at, u.username, u.email, c.content AS comment_content " +
                 "FROM sub_comments sc " +
                 "JOIN users u ON sc.user_id = u.id " +
                 "JOIN comments c ON sc.comment_id = c.id " +
-                "WHERE sc.comment_id = ?";
-        return template.query(sql, new SubCommentRowMapper(), commentId);
+                "WHERE sc.comment_id = ? limit ? offset ?";
+        return template.query(sql, new SubCommentRowMapper(), commentId, limit, offset);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubComment> findNewestByCommentId(Long commentId, int limit, int offset) {
+        String sql = "SELECT sc.id, sc.content, sc.create_at, u.username, u.email, c.content AS comment_content " +
+                "FROM sub_comments sc " +
+                "JOIN users u ON sc.user_id = u.id " +
+                "JOIN comments c ON sc.comment_id = c.id " +
+                "WHERE sc.comment_id = ? ORDER BY create_at DESC limit ? offset ?";
+        return template.query(sql, new SubCommentRowMapper(), commentId, limit, offset);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubComment> findOldestByCommentId(Long commentId, int limit, int offset) {
+        String sql = "SELECT sc.id, sc.content, sc.create_at, u.username, u.email, c.content AS comment_content " +
+                "FROM sub_comments sc " +
+                "JOIN users u ON sc.user_id = u.id " +
+                "JOIN comments c ON sc.comment_id = c.id " +
+                "WHERE sc.comment_id = ? ORDER BY create_at ASC limit ? offset ?";
+        return template.query(sql, new SubCommentRowMapper(), commentId, limit, offset);
     }
 
     @Override
@@ -79,7 +136,7 @@ public class SubCommentDaoImpl implements SubCommentDao {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public int deleteById(Long id) {
         try {
             String sql = "DELETE FROM sub_comments WHERE id = ?";
@@ -97,7 +154,7 @@ class SubCommentRowMapper implements RowMapper<SubComment> {
         SubComment subComment = new SubComment();
         subComment.setId(rs.getLong("id"));
         subComment.setContent(rs.getString("content"));
-        subComment.setTimestamp(rs.getTimestamp("create_at"));
+        subComment.setCreateAt(rs.getTimestamp("create_at"));
 
         User user = new User();
         user.setId(rs.getLong("user_id"));
