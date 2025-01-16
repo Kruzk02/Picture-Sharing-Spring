@@ -6,12 +6,10 @@ import com.app.DAO.SubCommentDao;
 import com.app.DAO.UserDao;
 import com.app.DTO.request.CreateSubCommentRequest;
 import com.app.DTO.request.UpdatedCommentRequest;
-import com.app.Model.Media;
-import com.app.Model.MediaType;
-import com.app.Model.SubComment;
-import com.app.Model.User;
+import com.app.Model.*;
 import com.app.Service.SubCommentService;
 import com.app.exception.sub.CommentIsEmptyException;
+import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.SubCommentNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
 import com.app.utils.FileUtils;
@@ -46,14 +44,20 @@ public class SubCommentServiceImpl implements SubCommentService {
     public SubComment save(CreateSubCommentRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        String filename = mediaUtils.generateUniqueFilename(request.file().getOriginalFilename());
+        String extension = mediaUtils.getFileExtension(request.file().getOriginalFilename());
+
+        fileUtils.save(request.file(), filename, extension);
+        Media media = mediaDao.save(Media.builder()
+                .url(filename)
+                .mediaType(MediaType.fromExtension(extension))
+                .build());
+
         SubComment subComment = SubComment.builder()
                 .content(request.content())
                 .comment(commentDao.findBasicById(request.commentId()))
                 .user(userDao.findUserByUsername(authentication.getName()))
-                .media(Media.builder()
-                        .url(mediaUtils.generateUniqueFilename(request.file().getOriginalFilename()))
-                        .mediaType(MediaType.fromExtension(mediaUtils.getFileExtension(request.file().getOriginalFilename())))
-                        .build())
+                .media(media)
                 .createAt(Timestamp.from(Instant.now()))
                 .build();
 
@@ -81,6 +85,9 @@ public class SubCommentServiceImpl implements SubCommentService {
             throw new CommentIsEmptyException("A comment must have either content or a media attachment.");
         }
 
+        redisTemplate.opsForValue().getAndDelete("subComment:" + id);
+        redisTemplate.opsForValue().getAndDelete("subComments:" + id);
+
         if (request.media() != null && !request.media().isEmpty()) {
             String extensionOfMedia = mediaUtils.getFileExtension(subComment.getMedia().getUrl());
 
@@ -100,6 +107,8 @@ public class SubCommentServiceImpl implements SubCommentService {
             subComment.setContent(request.content());
         }
 
+        redisTemplate.opsForValue().set("subComment:" + id, subComment, Duration.ofHours(2));
+        redisTemplate.opsForValue().set("subComments:" + id, subComment, Duration.ofHours(2));
         return subCommentDao.update(id, subComment);
     }
 
@@ -174,14 +183,16 @@ public class SubCommentServiceImpl implements SubCommentService {
         User user = userDao.findUserByUsername(authentication.getName());
 
         SubComment subComment = subCommentDao.findById(id);
-        if (subComment == null) {
-            throw new SubCommentNotFoundException("Sub comment not found with a id: " + id);
+        if (subComment != null && Objects.equals(subComment.getUser().getId(), user.getId())) {
+            redisTemplate.opsForValue().getAndDelete("subComment:" + id);
+            redisTemplate.opsForValue().getAndDelete("subComments:" + id);
+            commentDao.deleteByPinId(id);
+        } else if (subComment != null && !Objects.equals(subComment.getUser().getId(), user.getId())){
+            throw new UserNotMatchException("User does not match with a sub comment");
         }
 
-        if (Objects.equals(subComment.getUser().getId(), user.getId())) {
-            subCommentDao.deleteById(id);
-        } else {
-            throw new UserNotMatchException("User does not match with sub comment");
+        if (subComment == null) {
+            throw new SubCommentNotFoundException("Sub comment not found with a id: " + id);
         }
     }
 }
