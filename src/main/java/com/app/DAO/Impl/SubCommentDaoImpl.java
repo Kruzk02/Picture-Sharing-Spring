@@ -2,6 +2,7 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.SubCommentDao;
 import com.app.Model.Comment;
+import com.app.Model.Media;
 import com.app.Model.SubComment;
 import com.app.Model.User;
 import com.app.exception.sub.SaveDataFailedException;
@@ -90,7 +91,12 @@ public class SubCommentDaoImpl implements SubCommentDao {
     @Override
     @Transactional(readOnly = true)
     public List<SubComment> findAllByCommentId(Long commentId, int limit, int offset) {
-        String sql = "SELECT sc.id, sc.content, sc.create_at, u.username, u.email, c.content AS comment_content " +
+        String sql = "SELECT sc.id AS sc_id, sc.content AS sc_content, sc.create_at as sc_create_at, " +
+                "sc.media_id AS sc_media_id, " +
+                "sc.comment_id AS sc_comment_id, " +
+                "u.id AS user_id, " +
+                "u.username AS user_username, " +
+                "c.content AS comment_content " +
                 "FROM sub_comments sc " +
                 "JOIN users u ON sc.user_id = u.id " +
                 "JOIN comments c ON sc.comment_id = c.id " +
@@ -101,7 +107,12 @@ public class SubCommentDaoImpl implements SubCommentDao {
     @Override
     @Transactional(readOnly = true)
     public List<SubComment> findNewestByCommentId(Long commentId, int limit, int offset) {
-        String sql = "SELECT sc.id, sc.content, sc.create_at, u.username, u.email, c.content AS comment_content " +
+        String sql = "SELECT sc.id AS sc_id, sc.content AS sc_content, sc.create_at as sc_create_at, " +
+                "sc.media_id AS sc_media_id, " +
+                "sc.comment_id AS sc_comment_id, " +
+                "u.id AS user_id, " +
+                "u.username AS user_username, " +
+                "c.content AS comment_content " +
                 "FROM sub_comments sc " +
                 "JOIN users u ON sc.user_id = u.id " +
                 "JOIN comments c ON sc.comment_id = c.id " +
@@ -112,7 +123,12 @@ public class SubCommentDaoImpl implements SubCommentDao {
     @Override
     @Transactional(readOnly = true)
     public List<SubComment> findOldestByCommentId(Long commentId, int limit, int offset) {
-        String sql = "SELECT sc.id, sc.content, sc.create_at, u.username, u.email, c.content AS comment_content " +
+        String sql = "SELECT sc.id AS sc_id, sc.content AS sc_content, sc.create_at as sc_create_at, " +
+                "sc.media_id AS sc_media_id, " +
+                "sc.comment_id AS sc_comment_id, " +
+                "u.id AS user_id, " +
+                "u.username AS user_username, " +
+                "c.content AS comment_content " +
                 "FROM sub_comments sc " +
                 "JOIN users u ON sc.user_id = u.id " +
                 "JOIN comments c ON sc.comment_id = c.id " +
@@ -124,13 +140,19 @@ public class SubCommentDaoImpl implements SubCommentDao {
     @Transactional(readOnly = true)
     public SubComment findById(Long id) {
         try {
-            String sql = "SELECT sc.*, u.username, u.email, c.content AS comment_content " +
+            String sql = "SELECT sc.id as sc_id, sc.content AS sc_content, sc.create_at AS sc_create_at, " +
+                    "sc.media_id AS sc_media_id, " +
+                    "sc.comment_id AS sc_comment_id, " +
+                    "u.id AS user_id, " +
+                    "u.username AS user_username, " +
+                    "c.content AS comment_content " +
                     "FROM sub_comments sc " +
                     "JOIN users u ON sc.user_id = u.id " +
                     "JOIN comments c ON sc.comment_id = c.id " +
                     "WHERE sc.id = ?";
             return template.queryForObject(sql, new SubCommentRowMapper(), id);
         } catch (DataAccessException e) {
+            System.out.println(e.getMessage());
             throw new SubCommentNotFoundException("Sub comment not found with id: " + id);
         }
     }
@@ -152,21 +174,25 @@ class SubCommentRowMapper implements RowMapper<SubComment> {
     @Override
     public SubComment mapRow(ResultSet rs, int rowNum) throws SQLException {
         SubComment subComment = new SubComment();
-        subComment.setId(rs.getLong("id"));
-        subComment.setContent(rs.getString("content"));
-        subComment.setCreateAt(rs.getTimestamp("create_at"));
+        subComment.setId(rs.getLong("sc_id"));
+
+        subComment.setContent(rs.getString("sc_content"));
+
+        Media media = new Media();
+        media.setId(rs.getLong("sc_media_id"));
+        subComment.setMedia(media);
 
         User user = new User();
         user.setId(rs.getLong("user_id"));
-        user.setUsername(rs.getString("username"));
-        user.setEmail(rs.getString("email"));
+        user.setUsername(rs.getString("user_username"));
         subComment.setUser(user);
 
         Comment comment = new Comment();
-        comment.setId(rs.getLong("comment_id"));
+        comment.setId(rs.getLong("sc_comment_id"));
         comment.setContent(rs.getString("comment_content"));
         subComment.setComment(comment);
 
+        subComment.setCreateAt(rs.getTimestamp("sc_create_at"));
         return subComment;
     }
 }
