@@ -1,10 +1,13 @@
 package com.app.DTO.response;
 
+import java.sql.Timestamp;
+
 public record SubCommentResponse(
-        Long subCommentId,
+        Long id,
         String content,
         long mediaId,
-        long commentId,
-        String username
+        CommentDTO commentDTO,
+        UserDTO userDTO,
+        Timestamp createAt
 ) { }
 

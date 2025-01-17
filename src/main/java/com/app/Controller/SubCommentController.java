@@ -2,9 +2,12 @@ package com.app.Controller;
 
 import com.app.DTO.request.CreateSubCommentRequest;
 import com.app.DTO.request.UpdatedCommentRequest;
+import com.app.DTO.response.CommentDTO;
 import com.app.DTO.response.SubCommentResponse;
+import com.app.DTO.response.UserDTO;
 import com.app.Model.SortType;
 import com.app.Model.SubComment;
+import com.app.Model.User;
 import com.app.Service.SubCommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -57,8 +60,9 @@ public class SubCommentController {
                     subComment.getId(),
                     subComment.getContent(),
                     subComment.getMedia().getId(),
-                    subComment.getComment().getId(),
-                    subComment.getUser().getUsername()
+                    new CommentDTO(subComment.getComment().getId(), subComment.getComment().getContent()),
+                    new UserDTO(subComment.getUser().getId(), subComment.getUser().getUsername()),
+                    subComment.getCreateAt()
                 )).toList());
     }
 
@@ -89,8 +93,9 @@ public class SubCommentController {
                 subComment.getId(),
                 subComment.getContent(),
                 subComment.getMedia().getId(),
-                subComment.getComment().getId(),
-                subComment.getUser().getUsername()
+                new CommentDTO(subComment.getComment().getId(), subComment.getComment().getContent()),
+                new UserDTO(subComment.getUser().getId(), subComment.getUser().getUsername()),
+                subComment.getCreateAt()
             ));
     }
 
@@ -113,8 +118,9 @@ public class SubCommentController {
                 subComment.getId(),
                 subComment.getContent(),
                 subComment.getMedia().getId(),
-                subComment.getComment().getId(),
-                subComment.getUser().getUsername()
+                new CommentDTO(subComment.getComment().getId(), subComment.getComment().getContent()),
+                new UserDTO(subComment.getUser().getId(), subComment.getUser().getUsername()),
+                subComment.getCreateAt()
             ));
     }
 
@@ -140,8 +146,9 @@ public class SubCommentController {
                 subComment.getId(),
                 subComment.getContent(),
                 subComment.getMedia().getId(),
-                subComment.getComment().getId(),
-                subComment.getUser().getUsername()
+                new CommentDTO(subComment.getComment().getId(), subComment.getComment().getContent()),
+                new UserDTO(subComment.getUser().getId(), subComment.getUser().getUsername()),
+                subComment.getCreateAt()
             ));
     }
 
