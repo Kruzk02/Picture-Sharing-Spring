@@ -9,7 +9,6 @@ import com.app.DTO.request.UpdatedCommentRequest;
 import com.app.Model.*;
 import com.app.Service.SubCommentService;
 import com.app.exception.sub.CommentIsEmptyException;
-import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.SubCommentNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
 import com.app.utils.FileUtils;
@@ -186,7 +185,7 @@ public class SubCommentServiceImpl implements SubCommentService {
         if (subComment != null && Objects.equals(subComment.getUser().getId(), user.getId())) {
             redisTemplate.opsForValue().getAndDelete("subComment:" + id);
             redisTemplate.opsForValue().getAndDelete("subComments:" + id);
-            commentDao.deleteByPinId(id);
+            subCommentDao.deleteById(id);
         } else if (subComment != null && !Objects.equals(subComment.getUser().getId(), user.getId())){
             throw new UserNotMatchException("User does not match with a sub comment");
         }
