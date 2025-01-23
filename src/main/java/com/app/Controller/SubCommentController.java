@@ -5,9 +5,7 @@ import com.app.DTO.request.UpdatedCommentRequest;
 import com.app.DTO.response.CommentDTO;
 import com.app.DTO.response.SubCommentResponse;
 import com.app.DTO.response.UserDTO;
-import com.app.Model.SortType;
 import com.app.Model.SubComment;
-import com.app.Model.User;
 import com.app.Service.SubCommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,57 +20,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/subcomment")
+@RequestMapping("/api/sub-comment")
 @AllArgsConstructor
 public class SubCommentController {
 
     private final SubCommentService subCommentService;
-
-    @Operation(summary = "Fetch all sub comments by comment id")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully fetch all sub comments",
-            content = {@Content(mediaType = "application/json", schema = @Schema(implementation = SubComment.class))}),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/{commentId}/comment")
-    public ResponseEntity<List<SubCommentResponse>> findAllByCommentId(
-            @Parameter(description = "Comment Id of the sub comments to be searched")
-            @PathVariable Long commentId,
-            @Parameter(description = "Sorting type for sub comments: NEWEST, OLDEST or DEFAULT")
-            @RequestParam(defaultValue = "DEFAULT") SortType sortType,
-            @Parameter(description = "Maximum number of sub comments to be retrieved")
-            @RequestParam(defaultValue = "10") int limit,
-            @Parameter(description = "Offset for pagination, indicating the starting point")
-            @RequestParam(defaultValue = "0") int offset
-    ) {
-        if (limit <= 0 || offset < 0) {
-            throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
-        }
-
-        List<SubComment> subComments = findAllByCommentIdHelper(commentId, limit, offset, sortType);
-        return ResponseEntity.status(HttpStatus.OK)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(subComments.stream().map(subComment ->
-                new SubCommentResponse(
-                    subComment.getId(),
-                    subComment.getContent(),
-                    subComment.getMedia().getId(),
-                    new CommentDTO(subComment.getComment().getId(), subComment.getComment().getContent()),
-                    new UserDTO(subComment.getUser().getId(), subComment.getUser().getUsername()),
-                    subComment.getCreateAt()
-                )).toList());
-    }
-
-    private List<SubComment> findAllByCommentIdHelper(long commentId, int limit, int offset, SortType sortType) {
-        return switch (sortType) {
-            case DEFAULT -> subCommentService.findAllByCommentId(commentId, limit, offset);
-            case NEWEST -> subCommentService.findNewestByCommentId(commentId, limit, offset);
-            case OLDEST -> subCommentService.findOldestByCommentId(commentId, limit, offset);
-        };
-    }
 
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Success updated an sub comment",
