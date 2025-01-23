@@ -182,16 +182,16 @@ public class SubCommentServiceImpl implements SubCommentService {
         User user = userDao.findUserByUsername(authentication.getName());
 
         SubComment subComment = subCommentDao.findById(id);
-        if (subComment != null && Objects.equals(subComment.getUser().getId(), user.getId())) {
-            redisTemplate.opsForValue().getAndDelete("subComment:" + id);
-            redisTemplate.opsForValue().getAndDelete("subComments:" + id);
-            subCommentDao.deleteById(id);
-        } else if (subComment != null && !Objects.equals(subComment.getUser().getId(), user.getId())){
-            throw new UserNotMatchException("User does not match with a sub comment");
+        if (subComment == null) {
+            throw new SubCommentNotFoundException("Sub comment not found with id: " + id);
         }
 
-        if (subComment == null) {
-            throw new SubCommentNotFoundException("Sub comment not found with a id: " + id);
+        if (!Objects.equals(subComment.getUser().getId(), user.getId())) {
+            throw new UserNotMatchException("Authenticated user does not own the sub comment");
         }
+
+        redisTemplate.opsForValue().getAndDelete("subComment:" + id);
+        redisTemplate.opsForValue().getAndDelete("subComments:" + id);
+        subCommentDao.deleteById(id);
     }
 }
