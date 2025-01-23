@@ -2,7 +2,6 @@ package com.app.Service.impl;
 
 import com.app.DAO.CommentDao;
 import com.app.DAO.MediaDao;
-import com.app.DAO.PinDao;
 import com.app.DAO.UserDao;
 import com.app.DTO.request.CreateCommentRequest;
 import com.app.DTO.request.UpdatedCommentRequest;
@@ -10,7 +9,6 @@ import com.app.Model.*;
 import com.app.Service.CommentService;
 import com.app.exception.sub.CommentIsEmptyException;
 import com.app.exception.sub.CommentNotFoundException;
-import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
 import com.app.utils.FileUtils;
 import com.app.utils.MediaUtils;
@@ -34,7 +32,6 @@ public class CommentServiceImpl implements CommentService {
 
     private final CommentDao commentDao;
     private final UserDao userDao;
-    private final PinDao pinDao;
     private final MediaDao mediaDao;
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
@@ -191,24 +188,16 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public void deleteById(Long id) {
         Comment comment = commentDao.findBasicById(id);
-        if(comment != null && Objects.equals(getAuthenticatedUser().getId(),comment.getUserId())){
-            commentDao.deleteById(comment.getId());
-            redisTemplate.delete("comment_basic: " + id);
-            redisTemplate.delete("comment_detail: " + id);
-        } else {
-            throw new UserNotMatchException("User does not match with a comment");
+        if (comment == null) {
+            throw new CommentNotFoundException("Comment not found with a id: " + id);
         }
-    }
 
-    @Override
-    public void deleteByPinId(Long pinId) {
-        Pin pin = pinDao.findById(pinId);
-        if (pin != null && Objects.equals(pin.getUserId(), getAuthenticatedUser().getId())) {
-            commentDao.deleteByPinId(pinId);
-        } else if (pin == null) {
-            throw new PinNotFoundException("Pin not found with a id: " + pin);
-        } else {
-            throw new UserNotMatchException("User does not match with a pin");
+        if(!Objects.equals(getAuthenticatedUser().getId(),comment.getUserId())){
+            throw new UserNotMatchException("Authenticated user does not own the comment.");
         }
+
+        commentDao.deleteById(comment.getId());
+        redisTemplate.delete("comment_basic: " + id);
+        redisTemplate.delete("comment_detail: " + id);
     }
 }
