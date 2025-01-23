@@ -203,18 +203,23 @@ public class PinServiceImpl implements PinService {
     public void delete(Long id) throws IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userDao.findUserByUsername(authentication.getName());
-        Pin pin = pinDao.findBasicById(id);
-        if (pin != null && Objects.equals(user.getId(), pin.getUserId())) {
-            Media media = mediaDao.findById(pin.getMediaId());
-            fileUtils.delete(media.getUrl(), media.getMediaType().toString());
-            mediaDao.deleteById(media.getId());
 
-            redisTemplate.opsForValue().getAndDelete("pin_basic:" + id);
-            redisTemplate.opsForValue().getAndDelete("pin_full:" + id);
-            redisTemplate.opsForValue().getAndDelete("pins:" + id);
-            pinDao.deleteById(id);
-        } else if (pin != null && !Objects.equals(user.getId(), pin.getUserId())) {
-            throw new UserNotMatchException("User does not matching with a pin owner");
+        Pin pin = pinDao.findBasicById(id);
+        if (pin == null) {
+            throw new PinNotFoundException("Pin not found with a id: " + id);
         }
+
+        if (!Objects.equals(user.getId(), pin.getUserId())) {
+            throw new UserNotMatchException("Authenticated user does not own the pin");
+        }
+
+        Media media = mediaDao.findById(pin.getMediaId());
+        fileUtils.delete(media.getUrl(), media.getMediaType().toString());
+        mediaDao.deleteById(media.getId());
+
+        redisTemplate.opsForValue().getAndDelete("pin_basic:" + id);
+        redisTemplate.opsForValue().getAndDelete("pin_full:" + id);
+        redisTemplate.opsForValue().getAndDelete("pins:" + id);
+        pinDao.deleteById(id);
     }
 }
