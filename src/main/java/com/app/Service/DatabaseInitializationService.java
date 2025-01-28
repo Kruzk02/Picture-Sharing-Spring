@@ -2,15 +2,14 @@ package com.app.Service;
 
 import com.app.DAO.PrivilegeDao;
 import com.app.DAO.RoleDao;
-import com.app.Model.Gender;
-import com.app.Model.Privilege;
-import com.app.Model.Role;
-import com.app.Model.User;
+import com.app.Model.*;
+import com.app.utils.MediaUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -36,14 +35,16 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
     private final RoleDao roleDao;
     private final PrivilegeDao privilegeDao;
     private final PasswordEncoder passwordEncoder;
+    private final MediaUtils mediaUtils;
     private boolean alreadySetup = false;
 
     @Autowired
-    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDao roleDao, PrivilegeDao privilegeDao, PasswordEncoder passwordEncoder) {
+    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDao roleDao, PrivilegeDao privilegeDao, PasswordEncoder passwordEncoder, MediaUtils mediaUtils) {
         this.jdbcTemplate = jdbcTemplate;
         this.roleDao = roleDao;
         this.privilegeDao = privilegeDao;
         this.passwordEncoder = passwordEncoder;
+        this.mediaUtils = mediaUtils;
     }
 
     @Override
@@ -70,11 +71,18 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
         Role roleAdmin = createRoleIfNotFound("ROLE_ADMIN", List.of(readPrivilege,writePrivilege));
         Role roleUser = createRoleIfNotFound("ROLE_USER", List.of(readPrivilege));
 
+        Resource defaultProfilePic = new FileSystemResource("profile_picture/default_profile_picture.png");
+        String extension = mediaUtils.getFileExtension(defaultProfilePic.getFilename());
+
+        Media media = Media.builder()
+                .url(defaultProfilePic.getFilename())
+                .mediaType(MediaType.fromExtension(extension))
+                .build();
         User user = User.builder()
                 .email("phucnguyen@gmail.com")
                 .username("phucnguyen")
                 .password(passwordEncoder.encode("123123"))
-                .profilePicture("profile_picture/default_profile_picture.png")
+                .media(media)
                 .roles(List.of(roleAdmin))
                 .gender(Gender.MALE)
                 .build();
