@@ -11,6 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class User implements Serializable {
 
     private Long id;
@@ -18,7 +19,7 @@ public class User implements Serializable {
     private String email;
     private String password;
     private List<Role> roles;
-    private String profilePicture;
+    private Media media;
     private String bio;
     private Gender gender;
     private Boolean enable;
