@@ -1,9 +1,7 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
-import com.app.Model.Gender;
-import com.app.Model.Role;
-import com.app.Model.User;
+import com.app.Model.*;
 import com.app.exception.sub.FileNotFoundException;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +38,7 @@ public class UserDaoImpl implements UserDao {
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.SERIALIZABLE)
     @Override
     public User register(User user) {
-        String userSql = "INSERT INTO users (username, email, password, profilePicture, gender,enable) VALUES (?, ?, ?, ?, ?, ?)";
+        String userSql = "INSERT INTO users (username, email, password, media_id, gender,enable) VALUES (?, ?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {
@@ -48,7 +46,7 @@ public class UserDaoImpl implements UserDao {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getEmail());
             ps.setString(3, user.getPassword());
-            ps.setString(4, user.getProfilePicture());
+            ps.setLong(4, user.getMedia().getId());
             ps.setString(5, user.getGender().toString().toUpperCase());
             ps.setBoolean(6, user.getEnable());
             return ps;
@@ -135,7 +133,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findFullUserByUsername(String username) {
         try {
-            String sql = "SELECT id, username, email, password, bio, profilePicture, gender FROM users WHERE username = ?";
+            String sql = "SELECT id, username, email, password, bio, media_id, gender FROM users WHERE username = ?";
             return jdbcTemplate.queryForObject(sql,new UserRowMapper(true, true, true, true), username);
         }catch (EmptyResultDataAccessException e) {
             return null;
@@ -184,19 +182,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public String findUserProfilePictureByUsername(String username) {
-        try {
-            String sql = "SELECT profilePicture FROM users WHERE username = ?";
-            return jdbcTemplate.queryForObject(sql,
-                    (rs, rowNum) -> rs.getString("profilePicture"),
-                    username);
-        } catch (EmptyResultDataAccessException e) {
-            throw new FileNotFoundException("File not found with a username: " + username);
-        }
-    }
-
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public User update(User user) {
@@ -205,6 +190,7 @@ public class UserDaoImpl implements UserDao {
 
         if (user.getUsername() != null) {
             sqlBuilder.append("username = ?, ");
+
             params.add(user.getUsername());
         }
 
@@ -223,9 +209,9 @@ public class UserDaoImpl implements UserDao {
             params.add(user.getBio());
         }
 
-        if (user.getProfilePicture() != null) {
-            sqlBuilder.append("profilePicture = ?, ");
-            params.add(user.getProfilePicture());
+        if (user.getMedia() != null) {
+            sqlBuilder.append("media_id = ?, ");
+            params.add(user.getMedia().getId());
         }
 
         if (user.getGender() != null) {
@@ -290,7 +276,9 @@ class UserRowMapper implements RowMapper<User> {
         user.setEmail(rs.getString("email"));
 
         if (includeProfilePicture) {
-            user.setProfilePicture(rs.getString("profilePicture"));
+            Media media = new Media();
+            media.setId(rs.getLong("media_id"));
+            user.setMedia(media);
         }
         if (includeBio) {
             user.setBio(rs.getString("bio"));

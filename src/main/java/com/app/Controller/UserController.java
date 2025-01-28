@@ -15,22 +15,15 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -92,39 +85,18 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(map);
     }
 
-    @GetMapping("/profile-picture")
-    public ResponseEntity<Resource> getProfilePicture() throws IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String profilePicture = userService.findUserProfilePictureByUsername(authentication.getName());
-
-        Path path = Paths.get(profilePicture);
-
-        String type = Files.probeContentType(path);
-        if (type == null) {
-            type = MediaType.APPLICATION_OCTET_STREAM_VALUE;
-        }
-
-        Resource resource = new FileSystemResource(path);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(type))
-                .body(resource);
-    }
-
     @Operation(summary = "Update user info")
     @PutMapping("/update-user")
     public ResponseEntity<UserResponse> updateUser(
-            @ModelAttribute UpdateUserRequest request,
-            @Nullable @RequestPart("profilePicture") MultipartFile profilePicture) throws IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+            @ModelAttribute UpdateUserRequest request) throws IOException {
 
-        User user = userService.update(request,username,profilePicture);
+        User user = userService.update(request);
+
         return ResponseEntity.status(HttpStatus.OK)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new UserResponse(
                 user.getId(),user.getUsername(),user.getEmail(),
-                user.getProfilePicture(), user.getPassword(), user.getBio(), user.getGender()
+                user.getMedia().getId(), user.getBio(), user.getGender()
             ));
     }
 
@@ -137,7 +109,7 @@ public class UserController {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new UserResponse(
                         user.getId(),user.getUsername(),user.getEmail(),
-                        user.getProfilePicture(), user.getPassword(), user.getBio(), user.getGender()
+                        user.getMedia().getId(), user.getBio(), user.getGender()
                 ));
     }
 

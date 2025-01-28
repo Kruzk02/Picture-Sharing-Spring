@@ -5,8 +5,7 @@ import com.app.Model.Gender;
 public record UserResponse(Long id,
                            String username,
                            String email,
-                           String profilePicture,
-                           String password,
+                           long mediaId,
                            String bio,
                            Gender gender
 ) { }

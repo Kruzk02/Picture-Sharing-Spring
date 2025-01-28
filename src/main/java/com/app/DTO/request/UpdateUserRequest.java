@@ -1,12 +1,13 @@
 package com.app.DTO.request;
 
 import com.app.Model.Gender;
-import jakarta.annotation.Nullable;
+import org.springframework.web.multipart.MultipartFile;
 
 public record UpdateUserRequest(
-        @Nullable String username,
-        @Nullable String email,
-        @Nullable String password,
-        @Nullable String bio,
-        @Nullable Gender gender
+        String username,
+        String email,
+        String password,
+        String bio,
+        Gender gender,
+        MultipartFile profilePicture
 ) { }

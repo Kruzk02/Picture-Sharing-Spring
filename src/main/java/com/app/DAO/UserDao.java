@@ -62,13 +62,6 @@ public interface UserDao {
     User findPasswordNRoleByUsername(String username);
 
     /**
-     * Find profile picture by their username
-     * @param username the username of profile picture to find
-     * @return the file path found, or null if not found
-     */
-    String findUserProfilePictureByUsername(String username);
-
-    /**
      * Update existing user
      * @param user the user object to update
      * @return The user object
