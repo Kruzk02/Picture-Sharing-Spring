@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * User service class responsible for user related operations such as registration, login, and retrieval.<p>
@@ -154,10 +155,15 @@ public class UserServiceImpl implements UserService {
     }
 
     private void saveProfilePicture(User user, MultipartFile profilePicture) {
+        Media existingMedia = mediaDao.findById(user.getMedia().getId());
+        String extensionOfExistingMedia = mediaUtils.getFileExtension(existingMedia.getUrl());
+
         String filename = mediaUtils.generateUniqueFilename(profilePicture.getOriginalFilename());
         String extension = mediaUtils.getFileExtension(profilePicture.getOriginalFilename());
 
-        fileUtils.save(profilePicture, filename, extension);
+        CompletableFuture.runAsync(() -> fileUtils.delete(existingMedia.getUrl(), extensionOfExistingMedia)
+                .thenRunAsync(() -> fileUtils.save(profilePicture, filename, extension)));
+
         Media media = mediaDao.save(Media.builder()
                 .url(filename)
                 .mediaType(MediaType.fromExtension(extension))
