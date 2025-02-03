@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public enum MediaType {
-    IMAGE("JPEG","PNG","GIF"),
+    IMAGE("JPEG", "JPG","PNG","GIF"),
     VIDEO("MP4");
 
     private final Set<String> validFormat;
