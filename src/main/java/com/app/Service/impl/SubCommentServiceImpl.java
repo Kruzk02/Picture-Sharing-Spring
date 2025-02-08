@@ -22,10 +22,8 @@ import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -37,7 +35,7 @@ public class SubCommentServiceImpl implements SubCommentService {
     private final MediaDao mediaDao;
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
-    private final RedisTemplate<Object,Object> redisTemplate;
+    private final RedisTemplate<String,SubComment> subCommentRedisTemplate;
 
     @Override
     public SubComment save(CreateSubCommentRequest request) {
@@ -61,7 +59,7 @@ public class SubCommentServiceImpl implements SubCommentService {
                 .build();
 
         SubComment savedSubComment = subCommentDao.save(subComment);
-        redisTemplate.opsForValue().set("subComment:" + savedSubComment.getId(),savedSubComment, Duration.ofHours(2));
+        subCommentRedisTemplate.opsForValue().set("subComment:" + savedSubComment.getId(),savedSubComment, Duration.ofHours(2));
 
         return savedSubComment;
     }
@@ -84,8 +82,7 @@ public class SubCommentServiceImpl implements SubCommentService {
             throw new CommentIsEmptyException("A comment must have either content or a media attachment.");
         }
 
-        redisTemplate.opsForValue().getAndDelete("subComment:" + id);
-        redisTemplate.opsForValue().getAndDelete("subComments:" + id);
+        subCommentRedisTemplate.delete("subComment:" + id);
 
         if (request.media() != null && !request.media().isEmpty()) {
             String extensionOfMedia = mediaUtils.getFileExtension(subComment.getMedia().getUrl());
@@ -106,73 +103,85 @@ public class SubCommentServiceImpl implements SubCommentService {
             subComment.setContent(request.content());
         }
 
-        redisTemplate.opsForValue().set("subComment:" + id, subComment, Duration.ofHours(2));
-        redisTemplate.opsForValue().set("subComments:" + id, subComment, Duration.ofHours(2));
+        subCommentRedisTemplate.opsForValue().set("subComment:" + id, subComment, Duration.ofHours(2));
         return subCommentDao.update(id, subComment);
     }
 
     @Override
     public SubComment findById(long id) {
-        SubComment cacheSubComment = (SubComment) redisTemplate.opsForValue().get("subComment:" + id);
+        String cacheKey = "subComment:" + id;
+
+        SubComment cacheSubComment = subCommentRedisTemplate.opsForValue().get(cacheKey);
         if (cacheSubComment != null) {
             return cacheSubComment;
         }
 
         SubComment subComment = subCommentDao.findById(id);
-        if (subComment != null) {
-            redisTemplate.opsForValue().set("subComment" + id,subComment,Duration.ofHours(2));
+        if (subComment == null) {
+            throw new SubCommentNotFoundException("Sub comment not found with a id: " + id);
         }
+
+        subCommentRedisTemplate.opsForValue().set(cacheKey,subComment,Duration.ofHours(2));
         return subComment;
     }
 
     @Override
     public List<SubComment> findAllByCommentId(long commentId, int limit, int offset) {
-        List<SubComment> subComments = subCommentDao.findAllByCommentId(commentId, limit ,offset);
-        List<Object> cacheKeys = subComments.stream()
-                .map(subComment -> "subComments:" + subComment.getId())
-                .collect(Collectors.toList());
-
-        List<Object> cacheSubComment = redisTemplate.opsForValue().multiGet(cacheKeys);
-
-        for (int i = 0;i < Objects.requireNonNull(cacheSubComment).size();i++) {
-            if (cacheSubComment.get(i) == null) {
-                redisTemplate.opsForValue().set(cacheKeys.get(i),subComments.get(i),Duration.ofHours(2));
-            }
+        String redisKey = "comment:" + commentId + ":subComments";
+        
+        List<SubComment> cachedSubComment = subCommentRedisTemplate.opsForList().range(redisKey, offset, offset + limit - 1);
+        if (cachedSubComment != null && !cachedSubComment.isEmpty()) {
+            return cachedSubComment;
         }
+
+        List<SubComment> subComments = subCommentDao.findAllByCommentId(commentId, limit, offset);
+        if (subComments.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        subCommentRedisTemplate.opsForList().rightPushAll(redisKey, subComments);
+        subCommentRedisTemplate.expire(redisKey, Duration.ofHours(2));
+
         return subComments;
     }
 
     @Override
     public List<SubComment> findNewestByCommentId(long commentId, int limit, int offset) {
-        List<SubComment> subComments = subCommentDao.findNewestByCommentId(commentId, limit, offset);
-        List<Object> cacheKeys = subComments.stream()
-                .map(subComment -> "subComments:" + subComment.getId())
-                .collect(Collectors.toList());
+        String redisKey = "comment:" + commentId + ":subComments:newest";
 
-        List<Object> cacheSubComments = redisTemplate.opsForValue().multiGet(cacheKeys);
-
-        for (int i = 0; i < Objects.requireNonNull(cacheSubComments).size(); i++) {
-            if (cacheSubComments.get(i) == null) {
-                redisTemplate.opsForValue().set(cacheKeys.get(i), subComments.get(i), Duration.ofHours(2));
-            }
+        List<SubComment> cachedSubComment = subCommentRedisTemplate.opsForList().range(redisKey, offset, offset + limit - 1);
+        if (cachedSubComment != null && !cachedSubComment.isEmpty()) {
+            return cachedSubComment;
         }
+
+        List<SubComment> subComments = subCommentDao.findNewestByCommentId(commentId, limit, offset);
+        if (subComments.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        subCommentRedisTemplate.opsForList().rightPushAll(redisKey, subComments);
+        subCommentRedisTemplate.expire(redisKey, Duration.ofHours(2));
+
         return subComments;
     }
 
     @Override
     public List<SubComment> findOldestByCommentId(long commentId, int limit, int offset) {
-        List<SubComment> subComments = subCommentDao.findOldestByCommentId(commentId, limit, offset);
-        List<Object> cacheKeys = subComments.stream()
-                .map(subComment -> "subComments:" + subComment.getId())
-                .collect(Collectors.toList());
+        String redisKey = "comment:" + commentId + ":subComments";
 
-        List<Object> cacheSubComments = redisTemplate.opsForValue().multiGet(cacheKeys);
-
-        for (int i = 0; i < Objects.requireNonNull(cacheSubComments).size(); i++) {
-            if (cacheSubComments.get(i) == null) {
-                redisTemplate.opsForValue().set(cacheKeys.get(i), subComments.get(i), Duration.ofHours(2));
-            }
+        List<SubComment> cachedSubComment = subCommentRedisTemplate.opsForList().range(redisKey, offset, offset + limit - 1);
+        if (cachedSubComment != null && !cachedSubComment.isEmpty()) {
+            return cachedSubComment;
         }
+
+        List<SubComment> subComments = subCommentDao.findOldestByCommentId(commentId, limit, offset);
+        if (subComments.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        subCommentRedisTemplate.opsForList().rightPushAll(redisKey, subComments);
+        subCommentRedisTemplate.expire(redisKey, Duration.ofHours(2));
+
         return subComments;
     }
 
@@ -190,8 +199,8 @@ public class SubCommentServiceImpl implements SubCommentService {
             throw new UserNotMatchException("Authenticated user does not own the sub comment");
         }
 
-        redisTemplate.opsForValue().getAndDelete("subComment:" + id);
-        redisTemplate.opsForValue().getAndDelete("subComments:" + id);
+        System.out.println(subComment.getComment().getId());
+        subCommentRedisTemplate.delete("subComment:" + id);
         subCommentDao.deleteById(id);
     }
 }
