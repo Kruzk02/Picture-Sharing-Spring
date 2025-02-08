@@ -1,5 +1,8 @@
 package com.app.Config;
 
+import com.app.Model.Comment;
+import com.app.Model.Pin;
+import com.app.Model.SubComment;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
@@ -61,6 +64,33 @@ public class RedisConfig {
     public RedisTemplate<Object,Object> redisTemplate(RedisConnectionFactory redisConnectionFactory){
         RedisTemplate<Object,Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new JdkSerializationRedisSerializer());
+        return template;
+    }
+
+    @Bean
+    public RedisTemplate<String, Comment> commentRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Comment> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new JdkSerializationRedisSerializer());
+        return template;
+    }
+
+    @Bean
+    public RedisTemplate<String, SubComment> subCommentRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, SubComment> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new JdkSerializationRedisSerializer());
+        return template;
+    }
+
+    @Bean
+    public RedisTemplate<String, Pin> pinRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Pin> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new JdkSerializationRedisSerializer());
         return template;
