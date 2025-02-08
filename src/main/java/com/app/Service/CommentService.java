@@ -15,5 +15,4 @@ public interface CommentService {
     List<Comment> findNewestByPinId(Long pinId, int limit, int offset);
     List<Comment> findOldestByPinId(Long pinId, int limit, int offset);
     void deleteById(Long id);
-    void deleteByPinId(Long pinId);
 }
