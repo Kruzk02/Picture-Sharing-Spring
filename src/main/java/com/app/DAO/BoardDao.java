@@ -13,10 +13,17 @@ public interface BoardDao {
      * Saves a board object into the database and associates it with the specified pin.
      *
      * @param board The board object to be saved.
-     * @param pinId The id of the pin to associate the board with.
      * @return The saved board object.
      */
-    Board save(Board board, Long pinId);
+    Board save(Board board);
+
+    /** Update an existing board.
+     *
+     * @param board The board object to be saved.
+     * @param id id of the board.
+     * @return The updated board object.
+     */
+    Board update(Board board, long id);
 
     /**
      * Finds a board by its id.
