@@ -38,25 +38,39 @@ public class RedisConfig {
     private int redisPort;
 
     @Bean
-    public ProxyManager<String> lettuceBasedProxyManager() {
-        RedisClient redisClient = RedisClient.create(RedisURI.builder().withHost(redisHost).withPort(redisPort).withSsl(false).build());
-        StatefulRedisConnection<String,byte[]> redisConnection = redisClient.connect(RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE));
-        return LettuceBasedProxyManager.builderFor(redisConnection).withExpirationStrategy(ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(1L))).build();
+    public LettuceConnectionFactory redisConnectionFactory(){
+        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost,redisPort));
+    }
+
+    @Bean
+    public RedisClient redisClient() {
+        return RedisClient.create(RedisURI.builder()
+                .withHost(redisHost)
+                .withPort(redisPort)
+                .withSsl(false)
+                .build());
+    }
+
+    @Bean
+    public StatefulRedisConnection<String, byte[]> redisConnection(RedisClient redisClient) {
+        return redisClient.connect(RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE));
+    }
+
+    @Bean
+    public ProxyManager<String> proxyManager(StatefulRedisConnection<String, byte[]> redisConnection) {
+        return LettuceBasedProxyManager.builderFor(redisConnection)
+                .withExpirationStrategy(ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(1L)))
+                .build();
     }
 
     @Bean
     public Supplier<BucketConfiguration> bucketConfiguration() {
         return () -> BucketConfiguration.builder()
                 .addLimit(Bandwidth.builder()
-                        .capacity(200L)
-                        .refillGreedy(200L,Duration.ofMinutes(1L))
+                        .capacity(50L)
+                        .refillGreedy(50L, Duration.ofMinutes(1L))
                         .build())
                 .build();
-    }
-
-    @Bean
-    public LettuceConnectionFactory redisConnectionFactory(){
-        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost,redisPort));
     }
 
     @Bean
