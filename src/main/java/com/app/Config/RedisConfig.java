@@ -1,5 +1,6 @@
 package com.app.Config;
 
+import com.app.Model.Board;
 import com.app.Model.Comment;
 import com.app.Model.Pin;
 import com.app.Model.SubComment;
@@ -104,6 +105,15 @@ public class RedisConfig {
     @Bean
     public RedisTemplate<String, Pin> pinRedisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Pin> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new JdkSerializationRedisSerializer());
+        return template;
+    }
+
+    @Bean
+    public RedisTemplate<String, Board> BoardRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Board> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new JdkSerializationRedisSerializer());
