@@ -103,7 +103,7 @@ public class BoardDaoImpl implements BoardDao {
         try{
             String sql = "SELECT b.id AS board_id, b.board_name, b.create_at, " +
                     "u.id AS user_id, u.username," +
-                    "p.id AS pin_id, p.description, p.media_id " +
+                    "p.id AS pin_id, p.media_id, p.user_id AS pin_user_id " +
                     "FROM boards b " +
                     "JOIN users u ON b.user_id = u.id " +
                     "LEFT JOIN board_pin bp ON b.id = bp.board_id " +
@@ -118,16 +118,16 @@ public class BoardDaoImpl implements BoardDao {
     }
 
     @Override
-    public List<Board> findAllByUserId(Long userId) {
+    public List<Board> findAllByUserId(Long userId, int limit, int offset) {
         String sql = "SELECT b.id AS board_id, b.board_name, b.create_at, " +
                 "u.id AS user_id, u.username," +
-                "p.id AS pin_id, p.description, p.media_id " +
+                "p.id AS pin_id, p.media_id, p.user_id AS pin_user_id " +
                 "FROM boards b " +
                 "JOIN users u ON b.user_id = u.id " +
                 "LEFT JOIN board_pin bp ON b.id = bp.board_id " +
                 "LEFT JOIN pins p ON p.id = bp.pin_id " +
-                "WHERE b.user_id = ?";
-        return jdbcTemplate.query(sql, new BoardResultSetExtractor(),userId);
+                "WHERE b.user_id = ? limit ? offset ?";
+        return jdbcTemplate.query(sql, new BoardResultSetExtractor(),userId, limit, offset);
     }
 
     @Override
@@ -172,10 +172,11 @@ class BoardRowMapper implements RowMapper<Board> {
 
             long pinId = rs.getLong("pin_id");
             if (pinId != 0) {
+
                 Pin pin = Pin.builder()
                         .id(pinId)
-                        .description(rs.getString("description"))
                         .mediaId(rs.getLong("media_id"))
+                        .userId(rs.getLong("pin_user_id"))
                         .build();
                 board.getPins().add(pin);
             }
@@ -215,8 +216,8 @@ class BoardResultSetExtractor implements ResultSetExtractor<List<Board>> {
             if (pinId != 0) {
                 Pin pin = Pin.builder()
                         .id(pinId)
-                        .description(rs.getString("description"))
                         .mediaId(rs.getLong("media_id"))
+                        .userId(rs.getLong("pin_user_id"))
                         .build();
                 board.getPins().add(pin);
             }

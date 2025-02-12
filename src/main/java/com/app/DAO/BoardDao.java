@@ -38,7 +38,7 @@ public interface BoardDao {
      * @param userId the user id of the board to be found
      * @return a list of board
      */
-    List<Board> findAllByUserId(Long userId);
+    List<Board> findAllByUserId(Long userId, int limit, int offset);
     /**
      * Deletes a board from the database by its id.
      *
