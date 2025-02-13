@@ -1,38 +1,29 @@
 package com.app.Controller;
 
-import com.app.DTO.BoardDTO;
+import com.app.DTO.request.BoardRequest;
+import com.app.DTO.response.BoardResponse;
+import com.app.DTO.response.PinDTO;
+import com.app.DTO.response.UserDTO;
 import com.app.Model.Board;
-import com.app.Model.User;
 import com.app.Service.BoardService;
-import com.app.Service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
+@AllArgsConstructor
 @RequestMapping("/api/board")
 public class BoardController {
 
     private final BoardService boardService;
-    private final UserService userService;
-
-    @Autowired
-    public BoardController(BoardService boardService, UserService userService) {
-        this.boardService = boardService;
-        this.userService = userService;
-    }
 
     @Operation(summary = "Create new board")
     @ApiResponses(value = {
@@ -42,23 +33,40 @@ public class BoardController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/create")
-    public ResponseEntity<Board> create(
+    public ResponseEntity<BoardResponse> create(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "Board data", required = true,
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = BoardDTO.class))
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = BoardRequest.class))
         )
-        @RequestBody BoardDTO boardDTO
+        @RequestBody BoardRequest boardRequest
     ){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userService.findUserByUsername(authentication.getName());
-
-        boardDTO.setUser(user);
-
-        Board board = boardService.save(boardDTO);
+        Board board = boardService.save(boardRequest);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(board);
+                .body(new BoardResponse(board.getId(), board.getName(),
+                        new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
+                        board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList())
+                );
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BoardResponse> update(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Board data", required = true,
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = BoardRequest.class))
+            )
+            @RequestBody BoardRequest boardRequest,
+            @PathVariable Long id
+    ){
+        Board board = boardService.update(id, boardRequest);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new BoardResponse(board.getId(), board.getName(),
+                        new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
+                        board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList())
+                );
     }
 
     @Operation(summary = "Fetch board by its ID")
@@ -69,7 +77,7 @@ public class BoardController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Board> findById(
+    public ResponseEntity<BoardResponse> findById(
         @Parameter(description = "Id of the board to be search", required = true)
         @PathVariable Long id
     ){
@@ -77,25 +85,10 @@ public class BoardController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(board);
-    }
-
-    @Operation(summary = "Fetch all board by user id")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully fetch all board by user id",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Board.class))),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping
-    public ResponseEntity<List<Board>> findAllByUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userService.findUserByUsername(authentication.getName());
-
-        List<Board> boards = boardService.findAllByUserId(user.getId());
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(boards);
+                .body(new BoardResponse(board.getId(), board.getName(),
+                        new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
+                        board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList())
+                );
     }
 
     @Operation(summary = "Delete a board by its ID")
@@ -107,10 +100,7 @@ public class BoardController {
         @Parameter(description = "Id of the comment deleted")
         @PathVariable Long id
     ){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userService.findUserByUsername(authentication.getName());
-
-        boardService.deleteIfUserMatches(user,id);
+        boardService.deleteIfUserMatches(id);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
