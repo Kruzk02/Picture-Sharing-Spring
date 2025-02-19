@@ -1,6 +1,7 @@
 package com.app.DAO;
 
 import com.app.Model.Board;
+import com.app.Model.Pin;
 
 import java.util.List;
 
@@ -10,12 +11,15 @@ import java.util.List;
 public interface BoardDao {
 
     /**
-     * Saves a board object into the database and associates it with the specified pin.
+     * Saves a board object into the database and associates it with the specified pin or empty.
      *
      * @param board The board object to be saved.
      * @return The saved board object.
      */
     Board save(Board board);
+
+    Board addPinToBoard(Pin pin, Board board);
+    Board deletePinFromBoard(Pin pin, Board board);
 
     /** Update an existing board.
      *
