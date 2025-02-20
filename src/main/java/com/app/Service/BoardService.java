@@ -7,7 +7,9 @@ import java.util.List;
 
 public interface BoardService {
     Board save(BoardRequest boardRequest);
-    Board update(Long id, BoardRequest boardRequest);
+    Board addPinToBoard(Long pinId, Long boardId);
+    Board deletePinFromBoard(Long pinId, Long boardId);
+    Board update(Long id, String name);
     Board findById(Long id);
     List<Board> findAllByUserId(Long userId, int limit, int offset);
     void deleteIfUserMatches(Long id);
