@@ -1,6 +1,7 @@
 package com.app.Controller;
 
 import com.app.DTO.request.BoardRequest;
+import com.app.DTO.request.BoardUpdateRequest;
 import com.app.DTO.response.BoardResponse;
 import com.app.DTO.response.PinDTO;
 import com.app.DTO.response.UserDTO;
@@ -17,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
 
 @RestController
 @AllArgsConstructor
@@ -46,7 +49,46 @@ public class BoardController {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new BoardResponse(board.getId(), board.getName(),
                         new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
-                        board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList())
+                        !board.getPins().isEmpty() ?
+                                board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList() :
+                                Collections.emptyList()
+                        )
+                );
+    }
+
+    @PostMapping("/{boardId}/pin/{pinId}")
+    public ResponseEntity<BoardResponse> addPinToBoard(
+        @PathVariable Long boardId,
+        @PathVariable Long pinId
+    ) {
+        Board board = boardService.addPinToBoard(pinId, boardId);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new BoardResponse(board.getId(), board.getName(),
+                                new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
+                                !board.getPins().isEmpty() ?
+                                        board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList() :
+                                        Collections.emptyList()
+                        )
+                );
+    }
+
+    @DeleteMapping("/{boardId}/pin/{pinId}")
+    public ResponseEntity<BoardResponse> deletePinFromBoard(
+            @PathVariable Long boardId,
+            @PathVariable Long pinId
+    ) {
+        Board board = boardService.deletePinFromBoard(pinId, boardId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new BoardResponse(board.getId(), board.getName(),
+                                new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
+                                !board.getPins().isEmpty() ?
+                                        board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList() :
+                                        Collections.emptyList()
+                        )
                 );
     }
 
@@ -54,12 +96,12 @@ public class BoardController {
     public ResponseEntity<BoardResponse> update(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Board data", required = true,
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = BoardRequest.class))
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = BoardUpdateRequest.class))
             )
-            @RequestBody BoardRequest boardRequest,
+            @RequestBody BoardUpdateRequest request,
             @PathVariable Long id
     ){
-        Board board = boardService.update(id, boardRequest);
+        Board board = boardService.update(id, request.name());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -87,7 +129,10 @@ public class BoardController {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new BoardResponse(board.getId(), board.getName(),
                         new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
-                        board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList())
+                        !board.getPins().isEmpty() ?
+                                board.getPins().stream().map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId())).toList() :
+                                Collections.emptyList()
+                        )
                 );
     }
 

@@ -10,6 +10,8 @@ import java.sql.Timestamp;
 @Getter
 @Setter
 @Builder
+@ToString
+@EqualsAndHashCode
 public class Pin implements Serializable {
 
     private Long id;
