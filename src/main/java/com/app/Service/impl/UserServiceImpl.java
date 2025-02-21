@@ -182,7 +182,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Media getDefaultProfilePicturePath() {
-        Resource defaultProfilePic = new FileSystemResource("profile_picture/default_profile_picture.png");
+        Resource defaultProfilePic = new FileSystemResource("image/default_profile_picture.png");
         if (defaultProfilePic.exists()) {
             String extension = mediaUtils.getFileExtension(defaultProfilePic.getFilename());
             return mediaDao.save(Media.builder()
