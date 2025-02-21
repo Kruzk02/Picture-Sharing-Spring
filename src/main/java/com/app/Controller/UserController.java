@@ -3,12 +3,11 @@ package com.app.Controller;
 import com.app.DTO.request.LoginUserRequest;
 import com.app.DTO.request.RegisterUserRequest;
 import com.app.DTO.request.UpdateUserRequest;
-import com.app.DTO.response.LoginUserResponse;
-import com.app.DTO.response.RegisterUserResponse;
-import com.app.DTO.response.UserResponse;
-import com.app.DTO.response.VerifyAccountResponse;
+import com.app.DTO.response.*;
 import com.app.Jwt.JwtProvider;
+import com.app.Model.Board;
 import com.app.Model.User;
+import com.app.Service.BoardService;
 import com.app.Service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,14 +24,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-@RequestMapping("/api")
+@RequestMapping("/api/users")
 @RestController
 @AllArgsConstructor
 public class UserController {
 
     private final UserService userService;
+    private final BoardService boardService;
     private final JwtProvider jwtProvider;
 
     @Operation(summary = "Login account")
@@ -111,6 +112,34 @@ public class UserController {
                         user.getId(),user.getUsername(),user.getEmail(),
                         user.getMedia().getId(), user.getBio(), user.getGender()
                 ));
+    }
+
+
+    @Operation(summary = "Fetch all board by user id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully fetch all board by user id",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = Board.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/{userId}/boards")
+    public ResponseEntity<List<BoardResponse>> findAllByUserId(@PathVariable Long userId, @RequestParam(defaultValue = "10") int limit, @RequestParam(defaultValue = "0") int offset) {
+        List<Board> boards = boardService.findAllByUserId(userId, limit ,offset);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(boards.parallelStream()
+                        .map(board -> new BoardResponse(
+                                board.getId(),
+                                board.getName(),
+                                new UserDTO(board.getUser().getId(), board.getUser().getUsername()),
+                                board.getPins().stream()
+                                        .skip(offset)
+                                        .limit(limit)
+                                        .map(pin -> new PinDTO(pin.getId(), pin.getUserId(), pin.getMediaId()))
+                                        .toList()
+                        ))
+                        .toList()
+                );
     }
 
     @Operation(summary = "Verify user account")
