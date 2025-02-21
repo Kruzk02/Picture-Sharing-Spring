@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Repository
 public class CommentDaoImpl implements CommentDao {
@@ -49,7 +50,7 @@ public class CommentDaoImpl implements CommentDao {
             },keyHolder);
 
             if(row > 0){
-                comment.setId(keyHolder.getKey().longValue());
+                comment.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
                 return comment;
             }else {
                 return null;
@@ -128,8 +129,8 @@ public class CommentDaoImpl implements CommentDao {
     @Override
     public List<Comment> findNewestByPinId(Long pinId, int limit, int offset) {
         try {
-            String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at DESC limit ?";
-            return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false),pinId,limit);
+            String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at DESC limit ? offset ?";
+            return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false), pinId, limit, offset);
         }catch (DataAccessException e) {
             throw new CommentNotFoundException("Comment not found with a pinId: " + pinId);
         }
@@ -139,8 +140,8 @@ public class CommentDaoImpl implements CommentDao {
     @Override
     public List<Comment> findOldestByPinId(Long pinId, int limit, int offset) {
         try {
-            String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at ASC limit ?";
-            return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false),pinId,limit);
+            String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at ASC limit ? offset ?";
+            return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false), pinId, limit, offset);
         }catch (DataAccessException e) {
             throw new CommentNotFoundException("Comment not found with a pinId: " + pinId);
         }
