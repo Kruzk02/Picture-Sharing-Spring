@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Log4j2
 @Service
@@ -67,7 +66,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Comment update(Long id, UpdatedCommentRequest request) {
-        Comment comment = commentDao.findDetailsById(id);
+        Comment comment = commentDao.findById(id, true);
         if (comment == null) {
             throw new CommentNotFoundException("Comment not found with a id: " + id);
         }
@@ -80,8 +79,6 @@ public class CommentServiceImpl implements CommentService {
             throw new CommentIsEmptyException("A comment must have either content or a media attachment.");
         }
 
-        commentRedisTemplate.delete("comment_basic:" + id);
-        commentRedisTemplate.delete("comment_detail:" + id);
         commentRedisTemplate.delete("comments:" + id);
         if (request.media() != null && !request.media().isEmpty()) {
             Media existingMedia = mediaDao.findByCommentId(comment.getId());
@@ -112,11 +109,11 @@ public class CommentServiceImpl implements CommentService {
      * @return A comment with specified id, either fetch from database or cache. If not comment are found, an exception is thrown
      */
     @Override
-    public Comment findBasicById(Long id) {
-        String cacheKey = "comment_basic:" + id;
+    public Comment findById(Long id, boolean fetchDetails) {
+        String cacheKey = fetchDetails ? "comment:" + id + ":details" : "comment:" + id;
 
         // Retrieved cache comment from redis
-        Comment cacheComment = (Comment) commentRedisTemplate.opsForValue().get(cacheKey);
+        Comment cacheComment = commentRedisTemplate.opsForValue().get(cacheKey);
 
         if (cacheComment != null) {
             // Return cache comment if found
@@ -124,33 +121,7 @@ public class CommentServiceImpl implements CommentService {
         }
 
         // Fetch comment from the database
-        Comment comment = Optional.ofNullable(commentDao.findBasicById(id))
-                .orElseThrow(() -> new CommentNotFoundException("Comment not found with a id: " + id));
-
-        // Store in cache for 2 hours
-        commentRedisTemplate.opsForValue().set(cacheKey, comment, Duration.ofHours(2));
-        return comment;
-    }
-
-    /**
-     * Retrieves a comment with full details, using database and cache
-     * @param id The id of the comment to be found
-     * @return A comment with specified id, either fetch from database or cache. If not comment are found, an exception is thrown
-     */
-    @Override
-    public Comment findDetailsById(Long id) {
-        String cacheKey = "comment_detail:" + id;
-
-        // Retrieved cache comment from redis
-        Comment cacheComment = (Comment) commentRedisTemplate.opsForValue().get(cacheKey);
-
-        if (cacheComment != null) {
-            // return cache comment if found
-            return cacheComment;
-        }
-
-        // Fetch comment from the database and handle null safely
-        Comment comment = Optional.ofNullable(commentDao.findDetailsById(id))
+        Comment comment = Optional.ofNullable(commentDao.findById(id, fetchDetails))
                 .orElseThrow(() -> new CommentNotFoundException("Comment not found with a id: " + id));
 
         // Store in cache for 2 hours
@@ -161,74 +132,21 @@ public class CommentServiceImpl implements CommentService {
     /**
      * Retrieves a list of comment associated with specific pin, using both database and cache.
      * @param pinId The id of the pin whose comment are to be retrieved.
+     * @param sortType The sort of the newest or oldest comment.
      * @param limit The maximum number of comment to be return.
      * @param offset The offset to paginate the comment result.
      * @return A list of the comment associated with specified pin ID, either fetch from database or cache. If no comment are found, an empty list is returned
      */
     @Override
-    public List<Comment> findByPinId(Long pinId, int limit, int offset) {
-        String redisKeys = "pins:" + pinId + ":comments";
+    public List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset) {
+        String redisKeys = "pins:" + pinId + ":comments" + sortType;
 
         List<Comment> cachedComments = commentRedisTemplate.opsForList().range(redisKeys, offset, offset + limit - 1);
         if (cachedComments != null && !cachedComments.isEmpty()) {
             return cachedComments;
         }
 
-        List<Comment> comments = commentDao.findByPinId(pinId, limit, offset);
-        if (comments.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        commentRedisTemplate.opsForList().rightPushAll(redisKeys, comments);
-        commentRedisTemplate.expire(redisKeys, Duration.ofHours(2));
-
-        return comments;
-    }
-
-    /**
-     * Retrieves a list of newest comments associated with a specific pin, using both database and cache
-     * @param pinId The id of the pin whose comment are to be retrieved.
-     * @param limit The maximum number of comments to be return.
-     * @param offset The offset to paginate the comments result.
-     * @return A list of newest comments associated with specific pin, either from fetch database or cache. if no comment are found, an empty list is returned.
-     */
-    @Override
-    public List<Comment> findNewestByPinId(Long pinId, int limit, int offset) {
-        String redisKeys = "pins:" + pinId + ":comments:newest";
-
-        List<Comment> cachedComments = commentRedisTemplate.opsForList().range(redisKeys, offset, offset + limit - 1);
-        if (cachedComments != null && !cachedComments.isEmpty()) {
-            return cachedComments;
-        }
-
-        List<Comment> comments = commentDao.findNewestByPinId(pinId, limit, offset);
-        if (comments.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        commentRedisTemplate.opsForList().rightPushAll(redisKeys, comments);
-        commentRedisTemplate.expire(redisKeys, Duration.ofHours(2));
-
-        return comments;
-    }
-
-    /**
-     * Retrieves a list of oldest comments associated with a specific pin, using both database and cache
-     * @param pinId The id of the pin whose comment are to be retrieved.
-     * @param limit The maximum number of comments to be return.
-     * @param offset The offset to paginate the comments result.
-     * @return A list of oldest comments associated with specific pin, either from fetch database or cache. if no comment are found, an empty list is returned.
-     */
-    @Override
-    public List<Comment> findOldestByPinId(Long pinId, int limit, int offset) {
-        String redisKeys = "pins:" + pinId + ":comments";
-
-        List<Comment> cachedComments = commentRedisTemplate.opsForList().range(redisKeys, offset, offset + limit - 1);
-        if (cachedComments != null && !cachedComments.isEmpty()) {
-            return cachedComments;
-        }
-
-        List<Comment> comments = commentDao.findOldestByPinId(pinId, limit, offset);
+        List<Comment> comments = commentDao.findByPinId(pinId, sortType, limit, offset);
         if (comments.isEmpty()) {
             return Collections.emptyList();
         }
@@ -246,7 +164,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public void deleteById(Long id) {
         // Fetch the comment from database
-        Comment comment = commentDao.findBasicById(id);
+        Comment comment = commentDao.findById(id, false);
         if (comment == null) {
             // Throw exception if not found
             throw new CommentNotFoundException("Comment not found with a id: " + id);
@@ -258,10 +176,8 @@ public class CommentServiceImpl implements CommentService {
         }
 
         commentDao.deleteById(comment.getId());
-        commentRedisTemplate.delete("comment_basic:" + id);
-        commentRedisTemplate.delete("comment_detail:" + id);
-        commentRedisTemplate.delete("comments:" + id);
+        commentRedisTemplate.delete("comment:" + id);
+        commentRedisTemplate.delete("comment:" + id + ":details");
         commentRedisTemplate.delete("comment:" + id + ":subComments");
-        commentRedisTemplate.delete("comment:" + id + ":subComments:newest");
     }
 }
