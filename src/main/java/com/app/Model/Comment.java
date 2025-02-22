@@ -3,7 +3,7 @@ package com.app.Model;
 import lombok.*;
 
 import java.io.Serializable;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,5 +17,5 @@ public class Comment implements Serializable {
     private long pinId;
     private long userId;
     private long mediaId;
-    private Timestamp created_at;
+    private LocalDateTime created_at;
 }
