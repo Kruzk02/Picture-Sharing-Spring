@@ -2,8 +2,8 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.CommentDao;
 import com.app.Model.Comment;
+import com.app.Model.SortType;
 import com.app.exception.sub.CommentNotFoundException;
-import com.app.exception.sub.PinNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,10 +15,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -94,10 +91,15 @@ public class CommentDaoImpl implements CommentDao {
 
     @Transactional(readOnly = true)
     @Override
-    public Comment findBasicById(Long id) {
+    public Comment findById(Long id, boolean fetchDetails) {
         try {
-            String sql = "SELECT id, user_id, pin_id FROM comments WHERE id = ?";
-            return jdbcTemplate.queryForObject(sql, new CommentRowMapper(false, false, true), id);
+            if (fetchDetails) {
+                String sql = "SELECT * FROM comments WHERE id = ?";
+                return jdbcTemplate.queryForObject(sql, new CommentRowMapper(true, true, true), id);
+            } else {
+                String sql = "SELECT id, user_id, pin_id, created_at FROM comments WHERE id = ?";
+                return jdbcTemplate.queryForObject(sql, new CommentRowMapper(false, false, true), id);
+            }
         }catch (DataAccessException e) {
             throw new CommentNotFoundException("Comment not found with a id: " + id);
         }
@@ -105,45 +107,13 @@ public class CommentDaoImpl implements CommentDao {
 
     @Transactional(readOnly = true)
     @Override
-    public Comment findDetailsById(Long id) {
-        try{
-            String sql = "SELECT * FROM comments WHERE id = ?";
-            return jdbcTemplate.queryForObject(sql,new CommentRowMapper(true, true, true),id);
-        }catch (DataAccessException e){
-            throw new CommentNotFoundException("Comment not found with a id: " + id);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public List<Comment> findByPinId(Long pinId, int limit, int offset) {
-        try{
-            String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? limit ? offset ?";
-            return jdbcTemplate.query(sql, new CommentRowMapper(true,true, false), pinId, limit, offset);
-        }catch (DataAccessException e){
+    public List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset) {
+        try {
+            String sql = "SELECT id, content, user_id, media_id, created_at FROM comments WHERE pin_id = ? ORDER BY created_at " + sortType.getOrder() + " LIMIT ? OFFSET ?";
+            return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false), pinId, limit, offset);
+        } catch (DataAccessException e){
+            System.out.println(e.getMessage());
             throw new CommentNotFoundException("Comment not found with a pin id: " + pinId);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public List<Comment> findNewestByPinId(Long pinId, int limit, int offset) {
-        try {
-            String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at DESC limit ? offset ?";
-            return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false), pinId, limit, offset);
-        }catch (DataAccessException e) {
-            throw new CommentNotFoundException("Comment not found with a pinId: " + pinId);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public List<Comment> findOldestByPinId(Long pinId, int limit, int offset) {
-        try {
-            String sql = "SELECT id, content, user_id, media_id FROM comments WHERE pin_id = ? ORDER BY created_at ASC limit ? offset ?";
-            return jdbcTemplate.query(sql, new CommentRowMapper(true, true, false), pinId, limit, offset);
-        }catch (DataAccessException e) {
-            throw new CommentNotFoundException("Comment not found with a pinId: " + pinId);
         }
     }
 
@@ -155,17 +125,6 @@ public class CommentDaoImpl implements CommentDao {
             return jdbcTemplate.update(sql,id);
         }catch (DataAccessException e){
             throw new CommentNotFoundException("Comment not found with a id: " + id);
-        }
-    }
-
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
-    @Override
-    public int deleteByPinId(long pinId) {
-        try {
-            String sql = "DELETE FROM comments WHERE pin_id = ?";
-            return jdbcTemplate.update(sql, pinId);
-        }catch (DataAccessException e) {
-            throw new PinNotFoundException("Pin not found with a id: " + pinId);
         }
     }
 }
@@ -199,6 +158,7 @@ class CommentRowMapper implements RowMapper<Comment>{
             comment.setMediaId(rs.getLong("media_id"));
         }
 
+        comment.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
         return comment;
     }
 }

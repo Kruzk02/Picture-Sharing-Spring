@@ -1,6 +1,7 @@
 package com.app.DAO;
 
 import com.app.Model.Comment;
+import com.app.Model.SortType;
 
 import java.util.List;
 
@@ -25,43 +26,22 @@ public interface CommentDao {
     Comment update(Long id,Comment comment);
 
     /**
-     * Find a comment with basic details by its ID.
+     * Find a comment by its ID.
      * @param id The ID of the comment
+     * @param fetchDetails The basic or full details of the comment
      * @return The comment if found, or exception if not found
      */
-    Comment findBasicById(Long id);
-
-    /**
-     * Find a comment with full details by its ID.
-     * @param id The ID of the comment
-     * @return The comment if found, or exception if not found
-     */
-    Comment findDetailsById(Long id);
+    Comment findById(Long id, boolean fetchDetails);
 
     /**
      * Retrieves a list of comments by the ID of the associated pin.
      * @param pinId The id of the pin
+     * @param sortType The sort newest or oldest
      * @param limit The maximum number of result to return
      * @param offset the starting point for pagination
      * @return a list of comments
      */
-    List<Comment> findByPinId(Long pinId, int limit, int offset);
-
-    /**
-     * Retrieves the newest comments for specific pin ID.
-     * @param pinId The id of the pin
-     * @param limit The maximum number of results to return
-     * @return a list of newest comments
-     */
-    List<Comment> findNewestByPinId(Long pinId, int limit, int offset);
-
-    /**
-     * Retrieves the oldest comments for specific pin ID.
-     * @param pinId The id of the pin
-     * @param limit The maximum number of result to return
-     * @return a list of oldest comments
-     */
-    List<Comment> findOldestByPinId(Long pinId, int limit, int offset);
+    List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset);
 
     /**
      * Deletes a comment by its id.
@@ -69,12 +49,5 @@ public interface CommentDao {
      * @return the number of rows affected
      */
     int deleteById(Long id);
-
-    /**
-     * Deeltes all comment associated with a specific pin id.
-     * @param pinId The id of pin
-     * @return The number of rows affected
-     */
-    int deleteByPinId(long pinId);
 
 }
