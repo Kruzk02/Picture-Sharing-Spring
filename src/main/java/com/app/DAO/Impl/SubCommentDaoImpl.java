@@ -1,10 +1,7 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.SubCommentDao;
-import com.app.Model.Comment;
-import com.app.Model.Media;
-import com.app.Model.SubComment;
-import com.app.Model.User;
+import com.app.Model.*;
 import com.app.exception.sub.SaveDataFailedException;
 import com.app.exception.sub.SubCommentNotFoundException;
 import lombok.AllArgsConstructor;
@@ -90,7 +87,7 @@ public class SubCommentDaoImpl implements SubCommentDao {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SubComment> findAllByCommentId(Long commentId, int limit, int offset) {
+    public List<SubComment> findAllByCommentId(Long commentId, SortType sortType, int limit, int offset) {
         String sql = "SELECT sc.id AS sc_id, sc.content AS sc_content, sc.create_at as sc_create_at, " +
                 "sc.media_id AS sc_media_id, " +
                 "sc.comment_id AS sc_comment_id, " +
@@ -100,39 +97,7 @@ public class SubCommentDaoImpl implements SubCommentDao {
                 "FROM sub_comments sc " +
                 "JOIN users u ON sc.user_id = u.id " +
                 "JOIN comments c ON sc.comment_id = c.id " +
-                "WHERE sc.comment_id = ? limit ? offset ?";
-        return template.query(sql, new SubCommentRowMapper(), commentId, limit, offset);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SubComment> findNewestByCommentId(Long commentId, int limit, int offset) {
-        String sql = "SELECT sc.id AS sc_id, sc.content AS sc_content, sc.create_at as sc_create_at, " +
-                "sc.media_id AS sc_media_id, " +
-                "sc.comment_id AS sc_comment_id, " +
-                "u.id AS user_id, " +
-                "u.username AS user_username, " +
-                "c.content AS comment_content " +
-                "FROM sub_comments sc " +
-                "JOIN users u ON sc.user_id = u.id " +
-                "JOIN comments c ON sc.comment_id = c.id " +
-                "WHERE sc.comment_id = ? ORDER BY create_at DESC limit ? offset ?";
-        return template.query(sql, new SubCommentRowMapper(), commentId, limit, offset);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SubComment> findOldestByCommentId(Long commentId, int limit, int offset) {
-        String sql = "SELECT sc.id AS sc_id, sc.content AS sc_content, sc.create_at as sc_create_at, " +
-                "sc.media_id AS sc_media_id, " +
-                "sc.comment_id AS sc_comment_id, " +
-                "u.id AS user_id, " +
-                "u.username AS user_username, " +
-                "c.content AS comment_content " +
-                "FROM sub_comments sc " +
-                "JOIN users u ON sc.user_id = u.id " +
-                "JOIN comments c ON sc.comment_id = c.id " +
-                "WHERE sc.comment_id = ? ORDER BY create_at ASC limit ? offset ?";
+                "WHERE sc.comment_id = ? ORDER BY sc.create_at " + sortType.getOrder() + " limit ? offset ?";
         return template.query(sql, new SubCommentRowMapper(), commentId, limit, offset);
     }
 
@@ -192,7 +157,7 @@ class SubCommentRowMapper implements RowMapper<SubComment> {
         comment.setContent(rs.getString("comment_content"));
         subComment.setComment(comment);
 
-        subComment.setCreateAt(rs.getTimestamp("sc_create_at"));
+        subComment.setCreateAt(rs.getTimestamp("sc_create_at").toLocalDateTime());
         return subComment;
     }
 }
