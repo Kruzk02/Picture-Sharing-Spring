@@ -19,9 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -37,9 +35,13 @@ public class SubCommentServiceImpl implements SubCommentService {
     private final FileUtils fileUtils;
     private final RedisTemplate<String,SubComment> subCommentRedisTemplate;
 
+    private User getAuthenticationUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return userDao.findUserByUsername(authentication.getName());
+    }
+
     @Override
     public SubComment save(CreateSubCommentRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String filename = mediaUtils.generateUniqueFilename(request.file().getOriginalFilename());
         String extension = mediaUtils.getFileExtension(request.file().getOriginalFilename());
@@ -52,10 +54,9 @@ public class SubCommentServiceImpl implements SubCommentService {
 
         SubComment subComment = SubComment.builder()
                 .content(request.content())
-                .comment(commentDao.findBasicById(request.commentId()))
-                .user(userDao.findUserByUsername(authentication.getName()))
+                .comment(commentDao.findById(request.commentId(),false))
+                .user(getAuthenticationUser())
                 .media(media)
-                .createAt(Timestamp.from(Instant.now()))
                 .build();
 
         SubComment savedSubComment = subCommentDao.save(subComment);
@@ -66,15 +67,13 @@ public class SubCommentServiceImpl implements SubCommentService {
 
     @Override
     public SubComment update(long id, UpdatedCommentRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userDao.findUserByUsername(authentication.getName());
 
         SubComment subComment = subCommentDao.findById(id);
         if (subComment == null) {
             throw new SubCommentNotFoundException("Sub comment not found with a id: " + id);
         }
 
-        if (!Objects.equals(user.getId(), subComment.getUser().getId())) {
+        if (!Objects.equals(getAuthenticationUser().getId(), subComment.getUser().getId())) {
             throw new UserNotMatchException("User does not match with sub comment");
         }
 
@@ -126,55 +125,15 @@ public class SubCommentServiceImpl implements SubCommentService {
     }
 
     @Override
-    public List<SubComment> findAllByCommentId(long commentId, int limit, int offset) {
-        String redisKey = "comment:" + commentId + ":subComments";
+    public List<SubComment> findAllByCommentId(long commentId, SortType sortType, int limit, int offset) {
+        String redisKey = "comment:" + commentId + ":subComments:" + sortType;
         
         List<SubComment> cachedSubComment = subCommentRedisTemplate.opsForList().range(redisKey, offset, offset + limit - 1);
         if (cachedSubComment != null && !cachedSubComment.isEmpty()) {
             return cachedSubComment;
         }
 
-        List<SubComment> subComments = subCommentDao.findAllByCommentId(commentId, limit, offset);
-        if (subComments.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        subCommentRedisTemplate.opsForList().rightPushAll(redisKey, subComments);
-        subCommentRedisTemplate.expire(redisKey, Duration.ofHours(2));
-
-        return subComments;
-    }
-
-    @Override
-    public List<SubComment> findNewestByCommentId(long commentId, int limit, int offset) {
-        String redisKey = "comment:" + commentId + ":subComments:newest";
-
-        List<SubComment> cachedSubComment = subCommentRedisTemplate.opsForList().range(redisKey, offset, offset + limit - 1);
-        if (cachedSubComment != null && !cachedSubComment.isEmpty()) {
-            return cachedSubComment;
-        }
-
-        List<SubComment> subComments = subCommentDao.findNewestByCommentId(commentId, limit, offset);
-        if (subComments.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        subCommentRedisTemplate.opsForList().rightPushAll(redisKey, subComments);
-        subCommentRedisTemplate.expire(redisKey, Duration.ofHours(2));
-
-        return subComments;
-    }
-
-    @Override
-    public List<SubComment> findOldestByCommentId(long commentId, int limit, int offset) {
-        String redisKey = "comment:" + commentId + ":subComments";
-
-        List<SubComment> cachedSubComment = subCommentRedisTemplate.opsForList().range(redisKey, offset, offset + limit - 1);
-        if (cachedSubComment != null && !cachedSubComment.isEmpty()) {
-            return cachedSubComment;
-        }
-
-        List<SubComment> subComments = subCommentDao.findOldestByCommentId(commentId, limit, offset);
+        List<SubComment> subComments = subCommentDao.findAllByCommentId(commentId, sortType, limit, offset);
         if (subComments.isEmpty()) {
             return Collections.emptyList();
         }
@@ -187,15 +146,12 @@ public class SubCommentServiceImpl implements SubCommentService {
 
     @Override
     public void deleteById(long id) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userDao.findUserByUsername(authentication.getName());
-
         SubComment subComment = subCommentDao.findById(id);
         if (subComment == null) {
             throw new SubCommentNotFoundException("Sub comment not found with id: " + id);
         }
 
-        if (!Objects.equals(subComment.getUser().getId(), user.getId())) {
+        if (!Objects.equals(subComment.getUser().getId(), getAuthenticationUser().getId())) {
             throw new UserNotMatchException("Authenticated user does not own the sub comment");
         }
 
