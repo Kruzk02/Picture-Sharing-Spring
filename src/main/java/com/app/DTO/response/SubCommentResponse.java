@@ -1,6 +1,6 @@
 package com.app.DTO.response;
 
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 public record SubCommentResponse(
         Long id,
@@ -8,6 +8,6 @@ public record SubCommentResponse(
         long mediaId,
         CommentDTO commentDTO,
         UserDTO userDTO,
-        Timestamp createAt
+        LocalDateTime createAt
 ) { }
 

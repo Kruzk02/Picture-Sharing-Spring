@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,6 +19,6 @@ public class SubComment implements Serializable {
     private Comment comment;
     private User user;
     private Media media;
-    private Timestamp createAt;
+    private LocalDateTime createAt;
 
 }
