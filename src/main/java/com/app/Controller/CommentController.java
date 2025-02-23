@@ -45,9 +45,9 @@ public class CommentController {
         Comment comment;
 
         if ("details".equalsIgnoreCase(view)) {
-            comment = commentService.findDetailsById(id);
+            comment = commentService.findById(id, true);
         } else {
-            comment = commentService.findBasicById(id);
+            comment = commentService.findById(id, false);
         }
 
         if (comment == null) {
@@ -61,7 +61,8 @@ public class CommentController {
                 comment.getContent(),
                 comment.getPinId(),
                 comment.getUserId(),
-                comment.getMediaId()
+                comment.getMediaId(),
+                comment.getCreated_at()
             ));
     }
 
@@ -76,7 +77,7 @@ public class CommentController {
             @Parameter(description = "Comment Id of the sub comments to be searched")
             @PathVariable Long id,
             @Parameter(description = "Sorting type for sub comments: NEWEST, OLDEST or DEFAULT")
-            @RequestParam(defaultValue = "DEFAULT") SortType sortType,
+            @RequestParam(defaultValue = "NEWEST") SortType sortType,
             @Parameter(description = "Maximum number of sub comments to be retrieved")
             @RequestParam(defaultValue = "10") int limit,
             @Parameter(description = "Offset for pagination, indicating the starting point")
@@ -86,7 +87,7 @@ public class CommentController {
             throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
         }
 
-        List<SubComment> subComments = findAllByCommentIdHelper(id, limit, offset, sortType);
+        List<SubComment> subComments = subCommentService.findAllByCommentId(id, sortType, limit, offset);
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(subComments.stream().map(subComment ->
@@ -100,14 +101,6 @@ public class CommentController {
                         )).toList());
     }
 
-    private List<SubComment> findAllByCommentIdHelper(long commentId, int limit, int offset, SortType sortType) {
-        return switch (sortType) {
-            case DEFAULT -> subCommentService.findAllByCommentId(commentId, limit, offset);
-            case NEWEST -> subCommentService.findNewestByCommentId(commentId, limit, offset);
-            case OLDEST -> subCommentService.findOldestByCommentId(commentId, limit, offset);
-        };
-    }
-
     @Operation(description = "create an comment")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Create an comment",
@@ -115,7 +108,7 @@ public class CommentController {
         @ApiResponse(responseCode = "400", description = "Invalid input"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<CommentResponse> create(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Comment to created", required = true,
@@ -132,7 +125,8 @@ public class CommentController {
                 comment.getContent(),
                 comment.getPinId(),
                 comment.getUserId(),
-                comment.getMediaId()
+                comment.getMediaId(),
+                comment.getCreated_at()
             ));
     }
 
@@ -153,7 +147,8 @@ public class CommentController {
                 comment.getContent(),
                 comment.getPinId(),
                 comment.getUserId(),
-                comment.getMediaId()
+                comment.getMediaId(),
+                comment.getCreated_at()
             ));
     }
 
