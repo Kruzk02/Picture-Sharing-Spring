@@ -66,7 +66,7 @@ public class BoardServiceImpl implements BoardService {
             List<Pin> pins = new ArrayList<>();
 
             for (Long pinId : boardRequest.pin_id()) {
-                Pin pin = pinDao.findBasicById(pinId);
+                Pin pin = pinDao.findById(pinId, false);
                 if (pin == null) {
                     throw new PinNotFoundException("Pin not found with a id: " + pinId);
                 }
@@ -84,7 +84,7 @@ public class BoardServiceImpl implements BoardService {
 
     @Override
     public Board addPinToBoard(Long pinId, Long boardId) {
-        Pin pin = pinDao.findBasicById(pinId);
+        Pin pin = pinDao.findById(pinId, false);
         if (pin == null) {
             throw new PinNotFoundException("Pin not found with ID: " + pinId);
         }
@@ -107,7 +107,7 @@ public class BoardServiceImpl implements BoardService {
 
     @Override
     public Board deletePinFromBoard(Long pinId, Long boardId) {
-        Pin pin = pinDao.findBasicById(pinId);
+        Pin pin = pinDao.findById(pinId, false);
         if (pin == null) {
             throw new PinNotFoundException("Pin not found with ID: " + pinId);
         }

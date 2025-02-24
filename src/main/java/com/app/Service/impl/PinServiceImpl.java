@@ -4,10 +4,7 @@ import com.app.DAO.MediaDao;
 import com.app.DAO.PinDao;
 import com.app.DAO.UserDao;
 import com.app.DTO.request.PinRequest;
-import com.app.Model.Media;
-import com.app.Model.MediaType;
-import com.app.Model.Pin;
-import com.app.Model.User;
+import com.app.Model.*;
 import com.app.Service.PinService;
 import com.app.exception.sub.PinIsEmptyException;
 import com.app.exception.sub.PinNotFoundException;
@@ -15,8 +12,8 @@ import com.app.exception.sub.UserNotMatchException;
 import com.app.utils.FileUtils;
 import com.app.utils.MediaUtils;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -52,15 +49,15 @@ public class PinServiceImpl implements PinService {
      *
      * @return A List of all pins.
      */
-    public List<Pin> getAllPins(int offset) {
-        String redisKey = "pins";
+    public List<Pin> getAllPins(SortType sortType, int limit, int offset) {
+        String redisKey = "pins:" + sortType;
 
-        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey,offset, offset + 1);
+        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey,offset, offset - limit + 1);
         if (cachedPin != null && !cachedPin.isEmpty()) {
             return cachedPin;
         }
 
-        List<Pin> pins = pinDao.getAllPins(offset);
+        List<Pin> pins = pinDao.getAllPins(sortType, limit, offset);
         if (pins.isEmpty()) {
             return Collections.emptyList();
         }
@@ -97,7 +94,7 @@ public class PinServiceImpl implements PinService {
     @Override
     public Pin update(Long id, PinRequest pinRequest) {
 
-        Pin existingPin = pinDao.findFullById(id);
+        Pin existingPin = pinDao.findById(id, false);
 
         if (existingPin == null) {
             throw new PinNotFoundException("Pin not found with a id: " + id);
@@ -107,11 +104,8 @@ public class PinServiceImpl implements PinService {
             throw new UserNotMatchException("User does not matching with a pin owner");
         }
 
-        pinRedisTemplate.delete("pin_basic:" + id);
-        pinRedisTemplate.delete("pin_full:" + id);
-        pinRedisTemplate.delete("pins");
-        pinRedisTemplate.delete("pins:newest");
-        pinRedisTemplate.delete("pins:users:" + existingPin.getUserId());
+        pinRedisTemplate.delete("pin:" + id + ":basic");
+        pinRedisTemplate.delete("pin:" + id + ":details");
 
         if (pinRequest.file() != null && !pinRequest.file().isEmpty()) {
             Media existingMedia = mediaDao.findById(existingPin.getMediaId());
@@ -131,20 +125,18 @@ public class PinServiceImpl implements PinService {
 
         existingPin.setDescription(pinRequest.description() != null? pinRequest.description() : existingPin.getDescription());
 
-        pinRedisTemplate.opsForValue().set("pin_basic:" + id, existingPin, Duration.ofHours(2));
-        pinRedisTemplate.opsForValue().set("pin_full:" + id, existingPin, Duration.ofHours(2));
-
         return pinDao.update(id, existingPin);
     }
 
     /**
-     * Retrieves a pin with little details, using database or cache
+     * Retrieves a pin with little or full details, using database or cache
      * @param id The id of the pin to be found.
+     * @param fetchDetails The details of little or full details of the pin
      * @return A pin with specified id, either fetch from database or cache. If no pin are found, an exception is thrown
      */
     @Override
-    public Pin findBasicById(Long id) {
-        String cacheKey = "pin_basic:" + id;
+    public Pin findById(Long id, boolean fetchDetails) {
+        String cacheKey = fetchDetails ? "pin:" + id + ":details" : "pin:" + id + ":basic";
 
         // Retrieved cache pin from redis
         Pin cachedPin = pinRedisTemplate.opsForValue().get(cacheKey);
@@ -155,91 +147,13 @@ public class PinServiceImpl implements PinService {
         }
 
         // Fetch pin from the database and handle null safely
-        Pin pin = Optional.ofNullable(pinDao.findBasicById(id))
+        Pin pin = Optional.ofNullable(pinDao.findById(id, fetchDetails))
                 .orElseThrow(() -> new PinNotFoundException("Pin not found with a id: " + id));
 
         // Store in cache for 2 hours
         pinRedisTemplate.opsForValue().set(cacheKey, pin, Duration.ofHours(2));
 
         return pin;
-    }
-
-    /**
-     * Retrieves a pin with full details, using database or cache
-     * @param id The id of the id to be found.
-     * @return A pin with specified id, either fetch from database or cache. If no pin found, an exception is thrown
-     */
-    @Override
-    public Pin findFullById(Long id) {
-        String cacheKey = "pin_full:" + id;
-
-        // Retrieved cache pin from redis
-        Pin cachedPin = pinRedisTemplate.opsForValue().get(cacheKey);
-        if (cachedPin != null) {
-            // Return cache pin if found
-            return cachedPin;
-        }
-
-        // Fetch pin from the database and handle null safely
-        Pin pin = Optional.ofNullable(pinDao.findFullById(id))
-                .orElseThrow(() -> new PinNotFoundException("Pin not found with id: " + id));
-
-        // Store in cache for 2 hours
-        pinRedisTemplate.opsForValue().set(cacheKey, pin, Duration.ofHours(2));
-
-        return pin;
-    }
-
-    /**
-     * Retrieve a list of newest pin, using both database and cache
-     * @param limit The maximum number of pin return.
-     * @param offset The offset to paginate the pins result
-     * @return A list of newest pin, either from fetch database or cache. if no pin found, an empty list is returned
-     */
-    @Override
-    public List<Pin> findNewestPin(int limit, int offset) {
-        String redisKey = "pins:newest";
-
-        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey,offset, offset + limit - 1);
-        if (cachedPin != null && !cachedPin.isEmpty()) {
-            return cachedPin;
-        }
-
-        List<Pin> pins = pinDao.findNewestPin(limit, offset);
-        if (pins.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        pinRedisTemplate.opsForList().rightPushAll(redisKey, pins);
-        pinRedisTemplate.expire(redisKey,Duration.ofHours(2));
-
-        return pins;
-    }
-
-    /**
-     * Retrieves a list of oldest pin, using both database or cache
-     * @param limit The maximum number of pin return.
-     * @param offset The offset to paginate the pin result
-     * @return A list of oldest pin, either from database or cache. If no comment found, an empty list is returned.
-     */
-    @Override
-    public List<Pin> findOldestPin(int limit, int offset) {
-        String redisKey = "pins";
-
-        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey,offset, offset + limit - 1);
-        if (cachedPin != null && !cachedPin.isEmpty()) {
-            return cachedPin;
-        }
-
-        List<Pin> pins = pinDao.findOldestPin(limit, offset);
-        if (pins.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        pinRedisTemplate.opsForList().rightPushAll(redisKey, pins);
-        pinRedisTemplate.expire(redisKey,Duration.ofHours(2));
-
-        return pins;
     }
 
     /**
@@ -274,7 +188,7 @@ public class PinServiceImpl implements PinService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = userDao.findUserByUsername(authentication.getName());
 
-        Pin pin = pinDao.findBasicById(id);
+        Pin pin = pinDao.findById(id, false);
         if (pin == null) {
             throw new PinNotFoundException("Pin not found with a id: " + id);
         }
@@ -287,9 +201,10 @@ public class PinServiceImpl implements PinService {
         fileUtils.delete(media.getUrl(), media.getMediaType().toString());
         mediaDao.deleteById(media.getId());
 
-        pinRedisTemplate.delete("pin_basic:" + id);
-        pinRedisTemplate.delete("pin_full:" + id);
-        pinRedisTemplate.delete("pins:" + id);
+        pinRedisTemplate.delete("pin:" + id + ":basic");
+        pinRedisTemplate.delete("pin:" + id + ":details");
+        pinRedisTemplate.delete("pins:" + SortType.NEWEST);
+        pinRedisTemplate.delete("pins:" + SortType.OLDEST);
         pinRedisTemplate.delete("pins:user:" + pin.getUserId());
         pinDao.deleteById(id);
     }
