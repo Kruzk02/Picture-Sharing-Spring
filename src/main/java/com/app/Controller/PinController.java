@@ -30,14 +30,6 @@ public class PinController {
     private final PinService pinService;
     private final CommentService commentService;
 
-    private List<Pin> findAllPinHelper(int limit, int offset, SortType sortType) {
-        return switch (sortType) {
-            case NEWEST -> pinService.findNewestPin(limit, offset);
-            case OLDEST -> pinService.findOldestPin(limit, offset);
-            default -> pinService.getAllPins(offset);
-        };
-    }
-
     @Operation(summary = "Get all Pins")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully get all pins",
@@ -48,7 +40,7 @@ public class PinController {
     @GetMapping
     public ResponseEntity<List<PinResponse>> getAllPins(
         @Parameter(description = "Sorting type for pins: NEWEST, OLDEST or DEFAULT")
-        @RequestParam(defaultValue = "DEFAULT") SortType sortType,
+        @RequestParam(defaultValue = "NEWEST") SortType sortType,
         @Parameter(description = "Maximum number of pins to be retrieved")
         @RequestParam(defaultValue = "10") int limit,
         @Parameter(description = "Offset for pagination, indicating the starting point")
@@ -58,7 +50,7 @@ public class PinController {
             throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
         }
 
-        List<Pin> pins = findAllPinHelper(limit, offset, sortType);
+        List<Pin> pins = pinService.getAllPins(sortType, limit, offset);
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(pins.stream().map(pin ->
@@ -164,9 +156,9 @@ public class PinController {
     ){
         Pin pin;
         if ("detail".equalsIgnoreCase(view)) {
-            pin = pinService.findFullById(id);
+            pin = pinService.findById(id, true);
         } else {
-            pin = pinService.findBasicById(id);
+            pin = pinService.findById(id, false);
         }
 
         if (pin == null) {
@@ -184,14 +176,6 @@ public class PinController {
             ));
     }
 
-    private List<Comment> findCommentByPinIdHelper(Long pinId, int limit, int offset, SortType sortType) {
-        return switch (sortType) {
-            case NEWEST -> commentService.findNewestByPinId(pinId, limit, offset);
-            case OLDEST -> commentService.findOldestByPinId(pinId, limit, offset);
-            default -> commentService.findByPinId(pinId, limit, offset);
-        };
-    }
-
     @Operation(summary = "Find all comment by pin id")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully get all comment",
@@ -203,8 +187,8 @@ public class PinController {
     public ResponseEntity<List<CommentResponse>> getAllCommentByPinId(
         @Parameter(description = "id of the pin whose comment are to be retrieved", required = true)
         @PathVariable Long id,
-        @Parameter(description = "Sorting type for comments: NEWEST, OLDEST or DEFAULT")
-        @RequestParam(defaultValue = "DEFAULT") SortType sortType,
+        @Parameter(description = "Sorting type for comments: NEWEST, OLDEST")
+        @RequestParam(defaultValue = "NEWEST") SortType sortType,
         @Parameter(description = "Maximum number of comments to be retrieved")
         @RequestParam(defaultValue = "10") int limit,
         @Parameter(description = "Offset for pagination, indicating the starting point")
@@ -214,20 +198,16 @@ public class PinController {
             throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
         }
 
-        List<Comment> comments = findCommentByPinIdHelper(id, limit, offset, sortType);
-        if (comments.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-
         return ResponseEntity.status(HttpStatus.OK)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(comments.stream().map(comment ->
+            .body(commentService.findByPinId(id, sortType, limit, offset).stream().map(comment ->
                 new CommentResponse(
                     comment.getId(),
                     comment.getContent(),
-                    comment.getPinId(),
+                    id,
                     comment.getUserId(),
-                    comment.getMediaId()))
+                    comment.getMediaId(),
+                    comment.getCreated_at()))
                 .toList()
             );
     }
