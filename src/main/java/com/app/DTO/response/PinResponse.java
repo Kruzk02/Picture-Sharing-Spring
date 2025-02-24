@@ -1,11 +1,11 @@
 package com.app.DTO.response;
 
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 public record PinResponse(
         Long id,
         Long userId,
         String description,
         Long mediaId,
-        Timestamp createdAt
+        LocalDateTime createdAt
 ) { }
