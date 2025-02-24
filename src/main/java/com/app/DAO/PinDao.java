@@ -1,6 +1,8 @@
 package com.app.DAO;
 
 import com.app.Model.Pin;
+import com.app.Model.SortType;
+
 import java.util.List;
 
 /**
@@ -13,7 +15,7 @@ public interface PinDao {
      *
      * @return A list of all pins stored in the database.
      */
-    List<Pin> getAllPins(int offset);
+    List<Pin> getAllPins(SortType sortType, int limit, int offset);
 
     /**
      * Saves a pin object into the database.
@@ -30,29 +32,7 @@ public interface PinDao {
      * @param id The id of the pin to be found.
      * @return The pin object if found, otherwise null.
      */
-    Pin findBasicById(Long id);
-
-    /**
-     * Find a full detail pin by its id.
-     *
-     * @param id The id of the pin to be found.
-     * @return The pin object if found, otherwise throw exception.
-     */
-    Pin findFullById(Long id);
-
-    /**
-     * Find the newest pin.
-     * @param limit The maximum number of results to return
-     * @return a list of newest pin.
-     */
-    List<Pin> findNewestPin(int limit, int offset);
-
-    /**
-     * Find the oldest pin.
-     * @param limit The maximum number of result to return
-     * @return a list of oldest pin.
-     */
-    List<Pin> findOldestPin(int limit, int offset);
+    Pin findById(Long id, boolean fetchDetails);
 
     /**
      * Find the pin that associated with a user id.
@@ -61,13 +41,6 @@ public interface PinDao {
      * @return a list of pin.
      */
     List<Pin> findPinByUserId(Long userId, int limit, int offset);
-
-    /**
-     * Find a user id by pin id
-     * @param pinId the id of the pin
-     * @return The user object if found, otherwise throw PinNotFoundException
-     */
-    Pin findUserIdByPinId(Long pinId);
 
     /**
      * Deletes a pin from the database by its id.

@@ -185,7 +185,7 @@ class BoardResultSetExtractor implements ResultSetExtractor<List<Board>> {
                         .id(pinId)
                         .mediaId(rs.getLong("media_id"))
                         .userId(rs.getLong("pin_user_id"))
-                        .createdAt(rs.getTimestamp("pin_created_at"))
+                        .createdAt(rs.getTimestamp("pin_created_at").toLocalDateTime())
                         .build();
                 board.getPins().add(pin);
             } else {

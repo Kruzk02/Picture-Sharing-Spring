@@ -2,11 +2,11 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.PinDao;
 import com.app.Model.Pin;
+import com.app.Model.SortType;
 import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -39,9 +39,12 @@ public class PinDaoImpl implements PinDao {
 
     @Transactional(readOnly = true)
     @Override
-    public List<Pin> getAllPins(int offset) {
-        String sql = "SELECT id, user_id, media_id, created_at FROM pins LIMIT 5 OFFSET ?";
-        return jdbcTemplate.query(sql, new PinRowMapper(false, true), offset);
+    public List<Pin> getAllPins(SortType sortType, int limit, int offset) {
+        String orderBy = (sortType == SortType.NEWEST) ? "DESC" : "ASC";
+
+        String sql = "SELECT id, user_id, media_id, created_at FROM pins ORDER BY created_at " + orderBy + " LIMIT ? OFFSET ?";
+
+        return jdbcTemplate.query(sql, new PinRowMapper(false, true), limit, offset);
     }
 
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
@@ -102,45 +105,17 @@ public class PinDaoImpl implements PinDao {
 
     @Transactional(readOnly = true)
     @Override
-    public Pin findBasicById(Long id) {
-        try{
-            String sql = "SELECT id, media_id, user_id, created_at FROM pins where id = ?";
-            return jdbcTemplate.queryForObject(sql, new PinRowMapper(false, true),id);
-        }catch (DataAccessException e){
-            throw new PinNotFoundException("Pin not found with a id: " + id);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public Pin findFullById(Long id) {
-        try{
-            String sql = "SELECT * FROM pins where id = ?";
-            return jdbcTemplate.queryForObject(sql, new PinRowMapper(true, true),id);
-        }catch (DataAccessException e){
-            throw new PinNotFoundException("Pin not found with a id: " + id);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public List<Pin> findNewestPin(int limit, int offset) {
+    public Pin findById(Long id, boolean fetchDetails) {
         try {
-            String sql = "SELECT id, user_id, media_id, created_at FROM pins ORDER BY created_at DESC limit ? offset ?";
-            return jdbcTemplate.query(sql, new PinRowMapper(false, true), limit, offset);
-        } catch (DataAccessException e) {
-            throw new PinNotFoundException("Pin not found");
-        }
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public List<Pin> findOldestPin(int limit, int offset) {
-        try {
-            String sql = "SELECT id, user_id, media_id, created_at FROM pins ORDER BY created_at ASC limit ? offset ?";
-            return jdbcTemplate.query(sql, new PinRowMapper(false, true), limit, offset);
-        } catch (DataAccessException e) {
-            throw new PinNotFoundException("Pin not found");
+            if (fetchDetails) {
+                String sql = "SELECT * FROM pins where id = ?";
+                return jdbcTemplate.queryForObject(sql, new PinRowMapper(true, true), id);
+            } else {
+                String sql = "SELECT id, media_id, user_id, created_at FROM pins where id = ?";
+                return jdbcTemplate.queryForObject(sql, new PinRowMapper(false, true),id);
+            }
+        } catch (DataAccessException e){
+            throw new PinNotFoundException("Pin not found with a id: " + id);
         }
     }
 
@@ -152,17 +127,6 @@ public class PinDaoImpl implements PinDao {
             return jdbcTemplate.query(sql, new PinRowMapper(false, true), userId, limit, offset);
         } catch (DataAccessException e) {
             throw new UserNotFoundException("User not found with a id: " + userId);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public Pin findUserIdByPinId(Long pinId) {
-        try {
-            String sql = "SELECT id, user_id, created_at FROM pins where id = ?";
-            return jdbcTemplate.queryForObject(sql, new PinRowMapper(false, false),pinId);
-        } catch (DataAccessException e) {
-            throw new PinNotFoundException("Pin not found with a id: " + pinId);
         }
     }
 
@@ -203,7 +167,7 @@ class PinRowMapper implements RowMapper<Pin> {
         }
 
         pin.setUserId(rs.getLong("user_id"));
-        pin.setCreatedAt(rs.getTimestamp("created_at"));
+        pin.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
         return pin;
     }
 }
