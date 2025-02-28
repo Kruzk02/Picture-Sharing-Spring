@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -156,19 +157,28 @@ public class UserServiceImpl implements UserService {
 
     private void saveProfilePicture(User user, MultipartFile profilePicture) {
         Media existingMedia = mediaDao.findById(user.getMedia().getId());
-        String extensionOfExistingMedia = mediaUtils.getFileExtension(existingMedia.getUrl());
 
         String filename = mediaUtils.generateUniqueFilename(profilePicture.getOriginalFilename());
         String extension = mediaUtils.getFileExtension(profilePicture.getOriginalFilename());
 
-        CompletableFuture.runAsync(() -> fileUtils.delete(existingMedia.getUrl(), extensionOfExistingMedia)
-                .thenRunAsync(() -> fileUtils.save(profilePicture, filename, extension)));
+        Media media;
 
-        Media media = mediaDao.save(Media.builder()
-                .url(filename)
-                .mediaType(MediaType.fromExtension(extension))
-                .build());
+        fileUtils.save(profilePicture, filename, extension);
+        if (Objects.equals(existingMedia.getUrl(), getDefaultProfilePicturePath().getUrl())) {
+            media = mediaDao.save(Media.builder()
+                    .url(filename)
+                    .mediaType(MediaType.fromExtension(extension))
+                    .build());
+        } else {
+            String oldExtension = mediaUtils.getFileExtension(existingMedia.getUrl());
+            fileUtils.delete(existingMedia.getUrl(), oldExtension);
 
+            media = mediaDao.update(existingMedia.getId(), Media.builder()
+                    .id(existingMedia.getId())
+                    .url(filename)
+                    .mediaType(MediaType.fromExtension(extension))
+                    .build());
+        }
         user.setMedia(media);
     }
 
@@ -184,11 +194,10 @@ public class UserServiceImpl implements UserService {
     private Media getDefaultProfilePicturePath() {
         Resource defaultProfilePic = new FileSystemResource("image/default_profile_picture.png");
         if (defaultProfilePic.exists()) {
-            String extension = mediaUtils.getFileExtension(defaultProfilePic.getFilename());
-            return mediaDao.save(Media.builder()
+            return Media.builder()
+                    .id(1L)
                     .url(defaultProfilePic.getFilename())
-                    .mediaType(MediaType.fromExtension(extension))
-                    .build());
+                    .build();
         } else {
             throw new FileNotFoundException("File not found");
         }
