@@ -1,5 +1,6 @@
 package com.app.Service;
 
+import com.app.DAO.MediaDao;
 import com.app.DAO.PrivilegeDao;
 import com.app.DAO.RoleDao;
 import com.app.Model.*;
@@ -34,15 +35,17 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
     private final JdbcTemplate jdbcTemplate;
     private final RoleDao roleDao;
     private final PrivilegeDao privilegeDao;
+    private final MediaDao mediaDao;
     private final PasswordEncoder passwordEncoder;
     private final MediaUtils mediaUtils;
     private boolean alreadySetup = false;
 
     @Autowired
-    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDao roleDao, PrivilegeDao privilegeDao, PasswordEncoder passwordEncoder, MediaUtils mediaUtils) {
+    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDao roleDao, PrivilegeDao privilegeDao, MediaDao mediaDao, PasswordEncoder passwordEncoder, MediaUtils mediaUtils) {
         this.jdbcTemplate = jdbcTemplate;
         this.roleDao = roleDao;
         this.privilegeDao = privilegeDao;
+        this.mediaDao = mediaDao;
         this.passwordEncoder = passwordEncoder;
         this.mediaUtils = mediaUtils;
     }
@@ -64,6 +67,7 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
         executeSqlScript("comment.sql");
         executeSqlScript("sub_comment.sql");
         executeSqlScript("verification_token.sql");
+        executeSqlScript("followers.sql");
 
         Privilege readPrivilege = createPrivilegeIfNotFound("READ_PRIVILEGE");
         Privilege writePrivilege = createPrivilegeIfNotFound("WRITE_PRIVILEGE");
@@ -74,10 +78,10 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
         Resource defaultProfilePic = new FileSystemResource("profile_picture/default_profile_picture.png");
         String extension = mediaUtils.getFileExtension(defaultProfilePic.getFilename());
 
-        Media media = Media.builder()
+        Media media = mediaDao.save(Media.builder()
                 .url(defaultProfilePic.getFilename())
                 .mediaType(MediaType.fromExtension(extension))
-                .build();
+                .build());
         User user = User.builder()
                 .email("phucnguyen@gmail.com")
                 .username("phucnguyen")
