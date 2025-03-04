@@ -29,6 +29,17 @@ public class FollowerDaoImpl implements FollowerDao {
     }
 
     @Override
+    public boolean isUserAlreadyFollowing(long followerId, long userId) {
+        try {
+            String sql = "SELECT COUNT(*) FROM followers WHERE follower_id = ? AND following_id = ?";
+            Integer count = template.queryForObject(sql, Integer.class, followerId, userId);
+            return count > 0;
+        } catch (DataAccessException e) {
+            throw new RuntimeException("Error checking follow status: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public Follower addFollowerToUser(long followerId, long userId) {
         try {
             String sql = "INSERT INTO followers (follower_id, following_id) VALUES (?, ?)";

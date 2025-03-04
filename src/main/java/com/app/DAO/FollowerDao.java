@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface FollowerDao {
     List<Follower> getAllFollowersByUserId(long userId, int limit, int offset);
+    boolean isUserAlreadyFollowing(long followerId, long userId);
     Follower addFollowerToUser(long followerId, long userId);
     int removeFollowerFromUser(long followerId, long userId);
 }
