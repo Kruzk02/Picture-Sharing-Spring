@@ -5,18 +5,20 @@ import com.app.Model.Follower;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @AllArgsConstructor
+@Repository
 public class FollowerDaoImpl implements FollowerDao {
 
     private final JdbcTemplate template;
 
     @Override
-    public List<Follower> getAllFollowersByUserId(long userId, int limit, int offset) {
+    public List<Follower> getAllFollowingByUserId(long userId, int limit, int offset) {
         try {
-            String sql = "SELECT follower_id, following_id FROM followers WHERE following_id = ? LIMIT ? OFFSET ?";
+            String sql = "SELECT follower_id, following_id FROM followers WHERE follower_id = ? LIMIT ? OFFSET ?";
             return template.query(sql,(rs, rowNum) ->
                     Follower.builder()
                             .followerId(rs.getLong("follower_id"))
