@@ -8,6 +8,7 @@ import com.app.Jwt.JwtProvider;
 import com.app.Model.Board;
 import com.app.Model.User;
 import com.app.Service.BoardService;
+import com.app.Service.FollowerService;
 import com.app.Service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,6 +35,7 @@ public class UserController {
 
     private final UserService userService;
     private final BoardService boardService;
+    private final FollowerService followerService;
     private final JwtProvider jwtProvider;
 
     @Operation(summary = "Login account")
@@ -114,6 +116,29 @@ public class UserController {
                 ));
     }
 
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<List<FollowerResponse>> getAllFollowersByUserId(@PathVariable Long id, @RequestParam(defaultValue = "10") int limit, @RequestParam(defaultValue = "0") int offset) {
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(followerService.getAllFollowingByUserId(id, limit, offset).stream().map(follower ->
+                    new FollowerResponse(follower.getFollowingId())).toList()
+                );
+    }
+
+    @PostMapping("/{id}/followers")
+    public ResponseEntity<FollowerResponse> addFollower(@PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new FollowerResponse(followerService.addFollowerToUser(id).getFollowingId()));
+    }
+
+    @DeleteMapping("/{id}/followers")
+    public ResponseEntity<Void> removeFollower(@PathVariable Long id) {
+        followerService.removeFollowerFromUser(id);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .build();
+    }
 
     @Operation(summary = "Fetch all board by user id")
     @ApiResponses(value = {
