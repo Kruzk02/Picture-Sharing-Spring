@@ -9,12 +9,14 @@ import com.app.exception.sub.UserNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 @AllArgsConstructor
+@Service
 public class FollowerServiceImpl implements FollowerService {
 
     private final FollowerDao followerDao;
@@ -26,8 +28,8 @@ public class FollowerServiceImpl implements FollowerService {
     }
 
     @Override
-    public List<Follower> getAllFollowersByUserId(long userId,int limit, int offset) {
-        List<Follower> followers = followerDao.getAllFollowersByUserId(userId, limit, offset);
+    public List<Follower> getAllFollowingByUserId(long userId,int limit, int offset) {
+        List<Follower> followers = followerDao.getAllFollowingByUserId(userId, limit, offset);
         if (followers.isEmpty()) {
             return Collections.emptyList();
         }
