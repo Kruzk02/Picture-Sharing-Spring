@@ -28,12 +28,12 @@ public class FollowerServiceImpl implements FollowerService {
     }
 
     @Override
-    public List<Follower> getAllFollowingByUserId(long userId,int limit, int offset) {
-        List<Follower> followers = followerDao.getAllFollowingByUserId(userId, limit, offset);
-        if (followers.isEmpty()) {
+    public List<User> getAllFollowingByUserId(long userId,int limit) {
+        List<User> users = followerDao.getAllFollowingByUserId(userId, limit);
+        if (users.isEmpty()) {
             return Collections.emptyList();
         }
-        return followers;
+        return users;
     }
 
     @Override
