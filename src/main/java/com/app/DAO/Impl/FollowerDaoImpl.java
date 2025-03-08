@@ -2,6 +2,9 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.FollowerDao;
 import com.app.Model.Follower;
+import com.app.Model.Gender;
+import com.app.Model.Media;
+import com.app.Model.User;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,15 +19,26 @@ public class FollowerDaoImpl implements FollowerDao {
     private final JdbcTemplate template;
 
     @Override
-    public List<Follower> getAllFollowingByUserId(long userId, int limit, int offset) {
+    public List<User> getAllFollowingByUserId(long userId, int limit) {
         try {
-            String sql = "SELECT follower_id, following_id FROM followers WHERE follower_id = ? LIMIT ? OFFSET ?";
+            String sql = "SELECT u.id AS user_id, u.username, u.email, u.media_id, u.bio, u.gender " +
+                    "FROM followers f " +
+                    "JOIN users u ON f.following_id = u.id " +
+                    "WHERE f.follower_id = ? " +
+                    "ORDER BY u.id ASC LIMIT ?";
             return template.query(sql,(rs, rowNum) ->
-                    Follower.builder()
-                            .followerId(rs.getLong("follower_id"))
-                            .followingId(rs.getLong("following_id"))
+                    User.builder()
+                            .id(rs.getLong("user_id"))
+                            .username(rs.getString("username"))
+                            .email(rs.getString("email"))
+                            .bio(rs.getString("bio"))
+                            .gender(Gender.valueOf(rs.getString("gender").toUpperCase()))
+                            .media(Media.builder()
+                                .id(rs.getLong("media_id"))
+                                .build()
+                            )
                             .build()
-            , userId, limit, offset);
+            , userId, limit);
         } catch (DataAccessException e) {
             throw new RuntimeException("Error fetching followers: " + e.getMessage(), e);
         }
