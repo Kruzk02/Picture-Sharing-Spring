@@ -117,11 +117,11 @@ public class UserController {
     }
 
     @GetMapping("/{id}/followers")
-    public ResponseEntity<List<FollowerResponse>> getAllFollowersByUserId(@PathVariable Long id, @RequestParam(defaultValue = "10") int limit, @RequestParam(defaultValue = "0") int offset) {
+    public ResponseEntity<List<UserResponse>> getAllFollowersByUserId(@PathVariable Long id, @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(followerService.getAllFollowingByUserId(id, limit, offset).stream().map(follower ->
-                    new FollowerResponse(follower.getFollowingId())).toList()
+                .body(followerService.getAllFollowingByUserId(id, limit).stream().map(user ->
+                    new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getMedia().getId(), user.getBio(), user.getGender())).toList()
                 );
     }
 
