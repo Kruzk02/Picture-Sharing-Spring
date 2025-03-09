@@ -84,7 +84,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User login(String username) {
         try {
-            String sql = "SELECT u.id, u.username, u.email, u.password, roles.id as role_id, roles.name as role_name " +
+            String sql = "SELECT u.id, u.username, u.email, u.password, u.enable, roles.id as role_id, roles.name as role_name " +
                     "FROM users u " +
                     "JOIN users_roles ON u.id = users_roles.user_id " +
                     "JOIN roles ON users_roles.role_id = roles.id " +
@@ -274,6 +274,7 @@ class UserRowMapper implements RowMapper<User> {
         user.setId(rs.getLong("id"));
         user.setUsername(rs.getString("username"));
         user.setEmail(rs.getString("email"));
+        user.setEnable(rs.getBoolean("enable"));
 
         if (includeProfilePicture) {
             Media media = new Media();
