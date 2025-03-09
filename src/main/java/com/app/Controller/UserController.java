@@ -51,11 +51,10 @@ public class UserController {
             description = "Login Data",required = true,
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginUserRequest.class))
         )
-        @RequestBody LoginUserRequest request
-            ){
+        @RequestBody LoginUserRequest request, @RequestParam(defaultValue = "false") boolean isRemember){
         User user = userService.login(request);
 
-        String token = jwtProvider.generateToken(user.getUsername());
+        String token = jwtProvider.generateToken(user.getUsername(), isRemember, user.getEnable());
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new LoginUserResponse(token));
@@ -69,10 +68,10 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
     @PostMapping("/register")
-    public ResponseEntity<RegisterUserResponse> register(@RequestBody RegisterUserRequest request) throws IOException {
+    public ResponseEntity<RegisterUserResponse> register(@RequestBody RegisterUserRequest request) {
         User user = userService.register(request);
 
-        String token = jwtProvider.generateToken(user.getUsername());
+        String token = jwtProvider.generateToken(user.getUsername(), false, user.getEnable());
         return ResponseEntity.status(HttpStatus.CREATED)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new RegisterUserResponse(token));
