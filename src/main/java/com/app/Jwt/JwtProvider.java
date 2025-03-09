@@ -1,7 +1,5 @@
 package com.app.Jwt;
 
-import com.app.Model.Board;
-import com.app.Model.Pin;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -11,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 
@@ -19,23 +19,27 @@ public class JwtProvider {
 
     public static final String SECRET_KEY = "ePsWHptzmCNFlzdJsihQNxt2Ul0S+psp/S55LtUvKHE=";
 
-    public String generateToken(String username){
+    public String generateToken(String username, boolean isRemember, boolean isVerify) {
         Map<String,Object> claims = new HashMap<>();
-        return createToken(claims,username);
+        claims.put("user-verification", isVerify);
+        return isRemember ? createLongLivedToken(claims, username) : createShortLivedToken(claims, username);
     }
 
-    public String generateToken(String username,Map<String,Object> entity){
-        Map<String,Object> claims = new HashMap<>();
-        entity.forEach(claims::put);
-        return createToken(claims,username);
-    }
-
-    private String createToken(Map<String,Object> claims,String username){
+    private String createShortLivedToken(Map<String,Object> claims,String username) {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))
+                .setExpiration(Date.from(Instant.now().plus(30, ChronoUnit.MINUTES)))
+                .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
+    }
+
+    private String createLongLivedToken(Map<String,Object> claims,String username) {
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(username)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(Date.from(Instant.now().plus(30, ChronoUnit.DAYS)))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
     }
 
