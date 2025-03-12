@@ -46,7 +46,7 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/login")
-    public ResponseEntity<LoginUserResponse> login(
+    public ResponseEntity<JwtResponse> login(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Login Data",required = true,
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginUserRequest.class))
@@ -58,7 +58,7 @@ public class UserController {
         String token = jwtProvider.generateToken(user.getUsername());
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new LoginUserResponse(token));
+                .body(new JwtResponse(token));
     }
 
     @Operation(summary = "Register user account")
@@ -69,13 +69,13 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
     })
     @PostMapping("/register")
-    public ResponseEntity<RegisterUserResponse> register(@RequestBody RegisterUserRequest request) throws IOException {
+    public ResponseEntity<JwtResponse> register(@RequestBody RegisterUserRequest request) {
         User user = userService.register(request);
 
         String token = jwtProvider.generateToken(user.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new RegisterUserResponse(token));
+            .body(new JwtResponse(token));
     }
 
     @Operation(summary = "Get username from token")
@@ -91,7 +91,7 @@ public class UserController {
     @Operation(summary = "Update user info")
     @PutMapping("/update-user")
     public ResponseEntity<UserResponse> updateUser(
-            @ModelAttribute UpdateUserRequest request) throws IOException {
+            @ModelAttribute UpdateUserRequest request) {
 
         User user = userService.update(request);
 
