@@ -2,7 +2,6 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
 import com.app.Model.*;
-import com.app.exception.sub.FileNotFoundException;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -84,7 +83,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User login(String username) {
         try {
-            String sql = "SELECT u.id, u.username, u.email, u.password, roles.id as role_id, roles.name as role_name " +
+            String sql = "SELECT u.id, u.username, u.email, u.password, u.enable, roles.id as role_id, roles.name as role_name " +
                     "FROM users u " +
                     "JOIN users_roles ON u.id = users_roles.user_id " +
                     "JOIN roles ON users_roles.role_id = roles.id " +
@@ -111,7 +110,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findUserByUsername(String username) {
         try {
-            String sql = "SELECT id, username, email FROM users WHERE username = ?";
+            String sql = "SELECT id, username, email, enable FROM users WHERE username = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(false, false, false, false), username);
         } catch (EmptyResultDataAccessException e) {
             return null;
@@ -133,7 +132,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findFullUserByUsername(String username) {
         try {
-            String sql = "SELECT id, username, email, password, bio, media_id, gender FROM users WHERE username = ?";
+            String sql = "SELECT id, username, email, password, bio, media_id, enable, gender FROM users WHERE username = ?";
             return jdbcTemplate.queryForObject(sql,new UserRowMapper(true, true, true, true), username);
         }catch (EmptyResultDataAccessException e) {
             return null;
@@ -274,6 +273,7 @@ class UserRowMapper implements RowMapper<User> {
         user.setId(rs.getLong("id"));
         user.setUsername(rs.getString("username"));
         user.setEmail(rs.getString("email"));
+        user.setEnable(rs.getBoolean("enable"));
 
         if (includeProfilePicture) {
             Media media = new Media();
