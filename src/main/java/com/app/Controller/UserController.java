@@ -6,6 +6,7 @@ import com.app.DTO.request.UpdateUserRequest;
 import com.app.DTO.response.*;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.Board;
+import com.app.DTO.request.TokenRequest;
 import com.app.Model.User;
 import com.app.Service.BoardService;
 import com.app.Service.FollowerService;
@@ -15,28 +16,44 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import lombok.AllArgsConstructor;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RequestMapping("/api/users")
 @RestController
-@AllArgsConstructor
 public class UserController {
 
     private final UserService userService;
     private final BoardService boardService;
     private final FollowerService followerService;
-    private final JwtProvider jwtProvider;
+    @Qualifier(value = "jwtAccessToken") private final JwtProvider jwtAccessToken;
+    @Qualifier(value = "jwtRefreshToken") private final JwtProvider jwtRefreshToken;
+    private final RedisTemplate<Object,Object> redisTemplate;
+
+
+    @Autowired
+    public UserController(UserService userService, BoardService boardService, FollowerService followerService, JwtProvider jwtAccessToken, JwtProvider jwtRefreshToken, RedisTemplate<Object, Object> redisTemplate) {
+        this.userService = userService;
+        this.boardService = boardService;
+        this.followerService = followerService;
+        this.jwtAccessToken = jwtAccessToken;
+        this.jwtRefreshToken = jwtRefreshToken;
+        this.redisTemplate = redisTemplate;
+    }
 
     @Operation(summary = "Login account")
     @ApiResponses(value = {
@@ -51,14 +68,33 @@ public class UserController {
             description = "Login Data",required = true,
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginUserRequest.class))
         )
-        @RequestBody LoginUserRequest request
-            ){
+        @RequestBody LoginUserRequest request, @RequestParam(defaultValue = "false") boolean isRemember, HttpServletResponse response){
         User user = userService.login(request);
 
-        String token = jwtProvider.generateToken(user.getUsername());
+        String accessToken = jwtAccessToken.generateToken(TokenRequest.builder()
+                .claims(new HashMap<>())
+                .username(user.getUsername())
+                .isRemember(isRemember)
+                .build()
+        );
+        String refreshToken = jwtRefreshToken.generateToken(TokenRequest.builder()
+                .claims(new HashMap<>())
+                .username(user.getUsername())
+                .isRemember(isRemember)
+                .build()
+        );
+
+        Cookie cookie = new Cookie("refresh_token", refreshToken);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false);
+        cookie.setPath("http://localhost:8080/api/users/refresh");
+        cookie.setMaxAge(30 * 24 * 60 * 60);
+
+        response.addCookie(cookie);
+
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new JwtResponse(token));
+                .body(new JwtResponse(accessToken));
     }
 
     @Operation(summary = "Register user account")
@@ -72,10 +108,45 @@ public class UserController {
     public ResponseEntity<JwtResponse> register(@RequestBody RegisterUserRequest request) {
         User user = userService.register(request);
 
-        String token = jwtProvider.generateToken(user.getUsername());
+        String token = jwtAccessToken.generateToken(TokenRequest.builder()
+                .claims(new HashMap<>())
+                .username(user.getUsername())
+                .isRemember(false)
+                .build()
+        );
         return ResponseEntity.status(HttpStatus.CREATED)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new JwtResponse(token));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<JwtResponse> refreshAccessToken(@CookieValue(name = "refresh_token") String refreshToken, @RequestHeader(name = "Authorization") String oldAccessToken) {
+        if (refreshToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        oldAccessToken = oldAccessToken.substring(7);
+
+        String username = jwtRefreshToken.extractUsernameFromToken(refreshToken);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        if (!jwtRefreshToken.validateToken(refreshToken, username)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        long accessTokenExpiry = jwtAccessToken.extractExpiration(oldAccessToken).getTime() - System.currentTimeMillis();
+        System.out.println(accessTokenExpiry);
+        redisTemplate.opsForValue().set("blacklist:" + oldAccessToken, "blacklisted", accessTokenExpiry);
+
+        String accessToken = jwtAccessToken.generateToken(TokenRequest.builder()
+                .claims(new HashMap<>())
+                .username(username)
+                .build());
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new JwtResponse(accessToken));
     }
 
     @Operation(summary = "Get username from token")
