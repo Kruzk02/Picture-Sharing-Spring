@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -64,6 +65,11 @@ public class CommentController {
                 comment.getMediaId(),
                 comment.getCreated_at()
             ));
+    }
+
+    @GetMapping(value = "/sse", produces = "text/event-stream")
+    public SseEmitter stream() {
+        return commentService.createEmitter();
     }
 
     @Operation(summary = "Fetch all sub comments by comment id")

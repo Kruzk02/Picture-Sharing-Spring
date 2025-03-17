@@ -18,7 +18,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +36,7 @@ public class CommentServiceImpl implements CommentService {
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
     private final RedisTemplate<String, Comment> commentRedisTemplate;
+    private final List<SseEmitter> emitters;
 
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -61,7 +64,18 @@ public class CommentServiceImpl implements CommentService {
                 .mediaId(media.getId())
                 .userId(userDao.findUserByUsername(authentication.getName()).getId())
                 .build();
-        return commentDao.save(comment);
+        Comment savedComment = commentDao.save(comment);
+        emitters.forEach(emitter -> {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("new-comment")
+                        .data(savedComment));
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+                emitters.remove(emitter);
+            }
+        });
+        return savedComment;
     }
 
     @Override
@@ -100,7 +114,29 @@ public class CommentServiceImpl implements CommentService {
             comment.setContent(request.content());
         }
 
-        return commentDao.update(id, comment);
+        Comment updatedComment = commentDao.update(id, comment);
+        emitters.forEach(emitter -> {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("updated-comment")
+                        .data(updatedComment));
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+                emitters.remove(emitter);
+            }
+        });
+        return updatedComment;
+    }
+
+    @Override
+    public SseEmitter createEmitter() {
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        emitters.add(emitter);
+
+        emitter.onCompletion(() -> emitters.remove(emitter));
+        emitter.onTimeout(() -> emitters.remove(emitter));
+
+        return emitter;
     }
 
     /**
