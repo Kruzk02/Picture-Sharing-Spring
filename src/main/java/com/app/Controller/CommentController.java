@@ -67,11 +67,6 @@ public class CommentController {
             ));
     }
 
-    @GetMapping(value = "/sse", produces = "text/event-stream")
-    public SseEmitter stream() {
-        return commentService.createEmitter();
-    }
-
     @Operation(summary = "Fetch all sub comments by comment id")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully fetch all sub comments",

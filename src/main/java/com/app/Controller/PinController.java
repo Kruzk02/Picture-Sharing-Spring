@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.List;
@@ -139,6 +140,11 @@ public class PinController {
                 pin.getMediaId(),
                 pin.getCreatedAt())
             );
+    }
+
+    @GetMapping(value = "/{id}/sse-comment", produces = "text/event-stream")
+    public SseEmitter stream(@PathVariable long id) {
+        return commentService.createEmitter(id);
     }
 
     @Operation(summary = "Fetch a basic pin detail by its ID")
