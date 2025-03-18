@@ -11,7 +11,7 @@ import java.util.List;
 public interface CommentService {
     Comment save(CreateCommentRequest request);
     Comment update(Long id, UpdatedCommentRequest request);
-    SseEmitter createEmitter();
+    SseEmitter createEmitter(long pinId);
     Comment findById(Long id, boolean fetchDetails);
     List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset);
     void deleteById(Long id);

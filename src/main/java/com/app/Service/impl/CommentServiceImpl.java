@@ -36,7 +36,7 @@ public class CommentServiceImpl implements CommentService {
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
     private final RedisTemplate<String, Comment> commentRedisTemplate;
-    private final List<SseEmitter> emitters;
+    private final Map<Long, SseEmitter> emitters;
 
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -65,16 +65,19 @@ public class CommentServiceImpl implements CommentService {
                 .userId(userDao.findUserByUsername(authentication.getName()).getId())
                 .build();
         Comment savedComment = commentDao.save(comment);
-        emitters.forEach(emitter -> {
+
+        SseEmitter emitter = emitters.get(request.pinId());
+        if (emitter != null) {
             try {
                 emitter.send(SseEmitter.event()
                         .name("new-comment")
                         .data(savedComment));
             } catch (IOException e) {
                 emitter.completeWithError(e);
-                emitters.remove(emitter);
+                emitters.remove(request.pinId());
             }
-        });
+        }
+
         return savedComment;
     }
 
@@ -115,26 +118,29 @@ public class CommentServiceImpl implements CommentService {
         }
 
         Comment updatedComment = commentDao.update(id, comment);
-        emitters.forEach(emitter -> {
+
+        SseEmitter emitter = emitters.get(comment.getPinId());
+        if (emitter != null) {
             try {
                 emitter.send(SseEmitter.event()
                         .name("updated-comment")
                         .data(updatedComment));
             } catch (IOException e) {
                 emitter.completeWithError(e);
-                emitters.remove(emitter);
+                emitters.remove(comment.getPinId());
             }
-        });
+        }
+
         return updatedComment;
     }
 
     @Override
-    public SseEmitter createEmitter() {
+    public SseEmitter createEmitter(long pinId) {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-        emitters.add(emitter);
+        emitters.put(pinId, emitter);
 
-        emitter.onCompletion(() -> emitters.remove(emitter));
-        emitter.onTimeout(() -> emitters.remove(emitter));
+        emitter.onCompletion(() -> emitters.remove(pinId));
+        emitter.onTimeout(() -> emitters.remove(pinId));
 
         return emitter;
     }
