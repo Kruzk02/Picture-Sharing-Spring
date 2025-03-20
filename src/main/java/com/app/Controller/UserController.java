@@ -7,9 +7,11 @@ import com.app.DTO.response.*;
 import com.app.Jwt.JwtProvider;
 import com.app.Model.Board;
 import com.app.DTO.request.TokenRequest;
+import com.app.Model.Notification;
 import com.app.Model.User;
 import com.app.Service.BoardService;
 import com.app.Service.FollowerService;
+import com.app.Service.NotificationService;
 import com.app.Service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,7 +28,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -40,16 +41,18 @@ public class UserController {
     private final UserService userService;
     private final BoardService boardService;
     private final FollowerService followerService;
+    private final NotificationService notificationService;
     @Qualifier(value = "jwtAccessToken") private final JwtProvider jwtAccessToken;
     @Qualifier(value = "jwtRefreshToken") private final JwtProvider jwtRefreshToken;
     private final RedisTemplate<Object,Object> redisTemplate;
 
 
     @Autowired
-    public UserController(UserService userService, BoardService boardService, FollowerService followerService, JwtProvider jwtAccessToken, JwtProvider jwtRefreshToken, RedisTemplate<Object, Object> redisTemplate) {
+    public UserController(UserService userService, BoardService boardService, FollowerService followerService, NotificationService notificationService, JwtProvider jwtAccessToken, JwtProvider jwtRefreshToken, RedisTemplate<Object, Object> redisTemplate) {
         this.userService = userService;
         this.boardService = boardService;
         this.followerService = followerService;
+        this.notificationService = notificationService;
         this.jwtAccessToken = jwtAccessToken;
         this.jwtRefreshToken = jwtRefreshToken;
         this.redisTemplate = redisTemplate;
@@ -235,6 +238,23 @@ public class UserController {
                                         .toList()
                         ))
                         .toList()
+                );
+    }
+
+    @GetMapping("/notification")
+    public ResponseEntity<List<NotificationResponse>> findByUserId(@RequestParam(defaultValue = "false") boolean fetchUnread,@RequestParam(defaultValue = "10") int limit, @RequestParam(defaultValue = "0") int offset) {
+        List<Notification> notifications = notificationService.findByUserId(limit, offset, fetchUnread);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(notifications.stream()
+                        .map(notification -> new NotificationResponse(
+                                notification.getId(),
+                                notification.getUserId(),
+                                notification.getMessage(),
+                                notification.isRead(),
+                                notification.getCreatedAt()
+                        )).toList()
                 );
     }
 
