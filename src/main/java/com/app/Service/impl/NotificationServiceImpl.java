@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 @AllArgsConstructor
@@ -45,8 +46,11 @@ public class NotificationServiceImpl implements NotificationService {
         if (user == null) {
             throw new UserNotFoundException("User not found with a id: " + user.getId());
         }
-
-        return notificationDao.findByUserId(user.getId(), limit, offset, fetchUnread);
+        List<Notification> notifications = notificationDao.findByUserId(user.getId(), limit, offset, fetchUnread);
+        if (notifications.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return notifications;
     }
 
     @Override
