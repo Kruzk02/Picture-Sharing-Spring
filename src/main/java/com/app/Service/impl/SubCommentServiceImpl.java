@@ -9,8 +9,10 @@ import com.app.DTO.request.UpdatedCommentRequest;
 import com.app.Model.*;
 import com.app.Service.SubCommentService;
 import com.app.exception.sub.CommentIsEmptyException;
+import com.app.exception.sub.CommentNotFoundException;
 import com.app.exception.sub.SubCommentNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
+import com.app.message.producer.NotificationEventProducer;
 import com.app.utils.FileUtils;
 import com.app.utils.MediaUtils;
 import lombok.AllArgsConstructor;
@@ -34,6 +36,7 @@ public class SubCommentServiceImpl implements SubCommentService {
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
     private final RedisTemplate<String,SubComment> subCommentRedisTemplate;
+    private final NotificationEventProducer notificationEventProducer;
 
     private User getAuthenticationUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -52,9 +55,14 @@ public class SubCommentServiceImpl implements SubCommentService {
                 .mediaType(MediaType.fromExtension(extension))
                 .build());
 
+        Comment comment = commentDao.findById(request.commentId(),false);
+        if (comment == null) {
+            throw new CommentNotFoundException("Comment not found with a id: " + request.commentId());
+        }
+
         SubComment subComment = SubComment.builder()
                 .content(request.content())
-                .comment(commentDao.findById(request.commentId(),false))
+                .comment(comment)
                 .user(getAuthenticationUser())
                 .media(media)
                 .build();
@@ -62,6 +70,11 @@ public class SubCommentServiceImpl implements SubCommentService {
         SubComment savedSubComment = subCommentDao.save(subComment);
         subCommentRedisTemplate.opsForValue().set("subComment:" + savedSubComment.getId(),savedSubComment, Duration.ofHours(2));
 
+        notificationEventProducer.send(Notification.builder()
+                .userId(comment.getUserId())
+                .message(getAuthenticationUser().getUsername() + " replies on your comment " + comment.getId())
+                .build()
+        );
         return savedSubComment;
     }
 

@@ -2,6 +2,7 @@ package com.app.Service.impl;
 
 import com.app.DAO.CommentDao;
 import com.app.DAO.MediaDao;
+import com.app.DAO.PinDao;
 import com.app.DAO.UserDao;
 import com.app.DTO.request.CreateCommentRequest;
 import com.app.DTO.request.UpdatedCommentRequest;
@@ -9,7 +10,9 @@ import com.app.Model.*;
 import com.app.Service.CommentService;
 import com.app.exception.sub.CommentIsEmptyException;
 import com.app.exception.sub.CommentNotFoundException;
+import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
+import com.app.message.producer.NotificationEventProducer;
 import com.app.utils.FileUtils;
 import com.app.utils.MediaUtils;
 import lombok.AllArgsConstructor;
@@ -32,11 +35,13 @@ public class CommentServiceImpl implements CommentService {
 
     private final CommentDao commentDao;
     private final UserDao userDao;
+    private final PinDao pinDao;
     private final MediaDao mediaDao;
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
     private final RedisTemplate<String, Comment> commentRedisTemplate;
     private final Map<Long, SseEmitter> emitters;
+    private final NotificationEventProducer notificationEventProducer;
 
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -58,11 +63,18 @@ public class CommentServiceImpl implements CommentService {
                 .build());
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = userDao.findUserByUsername(authentication.getName()).getId();
+
+        Pin pin = pinDao.findById(request.pinId(), false);
+        if (pin == null) {
+            throw new PinNotFoundException("Pin not found with a id: " + request.pinId());
+        }
+
         Comment comment = Comment.builder()
                 .content(request.content())
-                .pinId(request.pinId())
+                .pinId(pin.getId())
                 .mediaId(media.getId())
-                .userId(userDao.findUserByUsername(authentication.getName()).getId())
+                .userId(userId)
                 .build();
         Comment savedComment = commentDao.save(comment);
 
@@ -78,6 +90,11 @@ public class CommentServiceImpl implements CommentService {
             }
         }
 
+        notificationEventProducer.send(Notification.builder()
+                .userId(pin.getUserId())
+                .message(authentication.getName() + " comment on your pin: " + request.pinId())
+                .build()
+        );
         return savedComment;
     }
 
