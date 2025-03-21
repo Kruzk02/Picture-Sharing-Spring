@@ -99,7 +99,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findUserById(Long id) {
         try {
-            String sql = "SELECT id, username, email FROM users WHERE id = ?";
+            String sql = "SELECT id, username, email, enable FROM users WHERE id = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(false, false, false, false), id);
         } catch (EmptyResultDataAccessException e) {
             throw new UserNotFoundException("User not found with id: " + id);
