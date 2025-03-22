@@ -23,7 +23,7 @@ public class NotificationDaoImpl implements NotificationDao {
     @Override
     public Notification save(Notification notification) {
         try {
-            String sql = "INSERT INTO notification(user_id, message) VALUES(?, ?)";
+            String sql = "INSERT INTO notifications(user_id, message) VALUES(?, ?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
             int row = template.update(conn -> {
