@@ -10,9 +10,12 @@ import lombok.AllArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @AllArgsConstructor
 @Service
@@ -20,6 +23,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationDao notificationDao;
     private final UserDao userDao;
+    private final Map<Long, SseEmitter> emitters;
 
     private User getAuthenticationUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -37,7 +41,21 @@ public class NotificationServiceImpl implements NotificationService {
             throw new RuntimeException("Notification message is empty");
         }
 
-        return notificationDao.save(notification);
+        Notification savedNotification = notificationDao.save(notification);
+        SseEmitter emitter = emitters.get(user.getId());
+        if (emitter != null) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("notification")
+                        .data(savedNotification)
+                );
+            } catch (IOException e) {
+                emitters.remove(user.getId());
+                emitter.completeWithError(e);
+            }
+        }
+
+        return savedNotification;
     }
 
     @Override
@@ -51,6 +69,17 @@ public class NotificationServiceImpl implements NotificationService {
             return Collections.emptyList();
         }
         return notifications;
+    }
+
+    @Override
+    public SseEmitter createEmitter(Long userId) {
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        emitters.put(userId, emitter);
+
+        emitter.onCompletion(() -> emitters.remove(userId));
+        emitter.onTimeout(() -> emitters.remove(userId));
+
+        return emitter;
     }
 
     @Override
