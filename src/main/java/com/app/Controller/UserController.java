@@ -29,6 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -256,6 +257,12 @@ public class UserController {
                                 notification.getCreatedAt()
                         )).toList()
                 );
+    }
+
+    @PostMapping("/sse-notification")
+    public SseEmitter stream() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return notificationService.createEmitter(userService.findFullUserByUsername(authentication.getName()).getId());
     }
 
     @Operation(summary = "Verify user account")
