@@ -7,7 +7,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@RequestMapping("/api/notification")
+@RestController
+@RequestMapping("/api/notifications")
 @AllArgsConstructor
 public class NotificationController {
 
@@ -29,13 +30,11 @@ public class NotificationController {
                 .build();
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/mark-all-as-read")
     public ResponseEntity<Void> markAllAsRead() {
         notificationService.markAllAsRead();
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
                 .build();
     }
-
-
 }
