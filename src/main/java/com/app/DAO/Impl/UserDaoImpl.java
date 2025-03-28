@@ -121,7 +121,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User findUserByEmail(String email) {
         try {
-            String sql = "SELECT id, username, email FROM users WHERE email = ?";
+            String sql = "SELECT id, username, email, enable FROM users WHERE email = ?";
             return jdbcTemplate.queryForObject(sql, new UserRowMapper(false, false, false, false), email);
         } catch (EmptyResultDataAccessException e) {
             return null;
