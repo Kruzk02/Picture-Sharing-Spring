@@ -1,0 +1,26 @@
+# Node modules (shouldn't be copied into image)
+node_modules
+
+# Dependency lock files other than npm (optional)
+yarn.lock
+pnpm-lock.yaml
+
+# Local environment files
+.env
+.env.*.local
+
+# Angular build output
+dist
+.out
+coverage
+
+# OS/Editor junk
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# Log files
+npm-debug.log
+yarn-debug.log
+yarn-error.log
