@@ -3,7 +3,7 @@ WORKDIR /app
 
 COPY pom.xml ./
 
-COPY . ./
+COPY .. ./
 RUN mvn package spring-boot:repackage -DskipTests
 
 FROM eclipse-temurin:21-jdk
