@@ -69,6 +69,9 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
         executeSqlScript("verification_token.sql");
         executeSqlScript("followers.sql");
         executeSqlScript("notification.sql");
+        executeSqlScript("hashtag.sql");
+        executeSqlScript("hashtags_comments.sql");
+        executeSqlScript("hashtags_pins.sql");
 
         Privilege readPrivilege = createPrivilegeIfNotFound("READ_PRIVILEGE");
         Privilege writePrivilege = createPrivilegeIfNotFound("WRITE_PRIVILEGE");
