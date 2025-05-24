@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Collection;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,6 +19,7 @@ public class Pin implements Serializable {
     private Long userId;
     private String description;
     private Long mediaId;
+    private Collection<Hashtag> hashtags;
     private LocalDateTime createdAt;
 
 }
