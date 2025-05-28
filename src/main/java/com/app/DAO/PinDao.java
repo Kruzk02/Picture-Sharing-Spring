@@ -17,6 +17,7 @@ public interface PinDao {
      */
     List<Pin> getAllPins(SortType sortType, int limit, int offset);
 
+    List<Pin> getAllPinsByHashtag(String tag, int limit, int offset);
     /**
      * Saves a pin object into the database.
      *
