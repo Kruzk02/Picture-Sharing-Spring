@@ -10,6 +10,7 @@ import java.util.List;
 public interface PinService {
 
     List<Pin> getAllPins(SortType sortType, int limit, int offset);
+    List<Pin> getAllPinsByHashtag(String tag, int limit, int offset);
     Pin save(PinRequest pinRequest);
     Pin update(Long id, PinRequest pinRequest);
     Pin findById(Long id, boolean fetchDetails);

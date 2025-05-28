@@ -1,9 +1,6 @@
 package com.app.Service.impl;
 
-import com.app.DAO.CommentDao;
-import com.app.DAO.MediaDao;
-import com.app.DAO.PinDao;
-import com.app.DAO.UserDao;
+import com.app.DAO.*;
 import com.app.DTO.request.CreateCommentRequest;
 import com.app.DTO.request.UpdatedCommentRequest;
 import com.app.Model.*;
@@ -37,6 +34,7 @@ public class CommentServiceImpl implements CommentService {
     private final UserDao userDao;
     private final PinDao pinDao;
     private final MediaDao mediaDao;
+    private final HashtagDao hashtagDao;
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
     private final RedisTemplate<String, Comment> commentRedisTemplate;
@@ -53,6 +51,19 @@ public class CommentServiceImpl implements CommentService {
         if ((request.content() == null || request.content().trim().isEmpty()) && request.media().isEmpty()) {
             throw new CommentIsEmptyException("A comment must have either content or a media attachment.");
         }
+
+        Set<String> tagsToFind = request.tags();
+        Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
+
+        List<Hashtag> hashtags = new ArrayList<>();
+        for (String tag : tagsToFind) {
+            Hashtag hashtag = tags.get(tag);
+            if (hashtag == null) {
+                hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
+            }
+            hashtags.add(hashtag);
+        }
+
         String filename = mediaUtils.generateUniqueFilename(request.media().getOriginalFilename());
         String extension = mediaUtils.getFileExtension(request.media().getOriginalFilename());
 
@@ -75,6 +86,7 @@ public class CommentServiceImpl implements CommentService {
                 .pinId(pin.getId())
                 .mediaId(media.getId())
                 .userId(userId)
+                .hashtags(hashtags)
                 .build();
         Comment savedComment = commentDao.save(comment);
 
@@ -134,6 +146,20 @@ public class CommentServiceImpl implements CommentService {
             comment.setContent(request.content());
         }
 
+        if (request.tags() != null && !request.tags().isEmpty()) {
+            Set<String> tagsToFind = request.tags();
+            Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
+
+            List<Hashtag> hashtags = new ArrayList<>();
+            for (String tag : tagsToFind) {
+                Hashtag hashtag = tags.get(tag);
+                if (hashtag == null) {
+                    hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
+                }
+                hashtags.add(hashtag);
+            }
+            comment.setHashtags(hashtags);
+        }
         Comment updatedComment = commentDao.update(id, comment);
 
         SseEmitter emitter = emitters.get(comment.getPinId());
@@ -206,6 +232,26 @@ public class CommentServiceImpl implements CommentService {
         }
 
         List<Comment> comments = commentDao.findByPinId(pinId, sortType, limit, offset);
+        if (comments.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        commentRedisTemplate.opsForList().rightPushAll(redisKeys, comments);
+        commentRedisTemplate.expire(redisKeys, Duration.ofHours(2));
+
+        return comments;
+    }
+
+    @Override
+    public List<Comment> findByHashtag(String tag, int limit, int offset) {
+        String redisKeys = "comments_hashtag:" + tag;
+
+        List<Comment> cachedComments = commentRedisTemplate.opsForList().range(redisKeys, offset, offset + limit - 1);
+        if (cachedComments != null && !cachedComments.isEmpty()) {
+            return cachedComments;
+        }
+
+        List<Comment> comments = commentDao.findByHashtag(tag, limit, offset);
         if (comments.isEmpty()) {
             return Collections.emptyList();
         }
