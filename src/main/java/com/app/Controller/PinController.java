@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -60,6 +62,42 @@ public class PinController {
                                 pin.getUserId(),
                                 pin.getDescription(),
                                 pin.getMediaId(),
+                                new ArrayList<>(),
+                                pin.getCreatedAt()
+                        )).toList()
+                );
+    }
+
+    @Operation(summary = "Get all Pins")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully get all pins",
+                    content = {@Content(mediaType = "application/json", schema = @Schema(implementation = Pin.class))}),
+            @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(mediaType = "application/json"))
+    })
+    @GetMapping("/{tag}/hashtag")
+    public ResponseEntity<List<PinResponse>> getAllPinsByTag(
+            @Parameter(description = "tag of the pin", required = true)
+            @PathVariable String tag,
+            @Parameter(description = "Maximum number of pins to be retrieved")
+            @RequestParam(defaultValue = "10") int limit,
+            @Parameter(description = "Offset for pagination, indicating the starting point")
+            @RequestParam(defaultValue = "0") int offset
+    ) {
+        if (limit <= 0 || offset < 0) {
+            throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
+        }
+
+        List<Pin> pins = pinService.getAllPinsByHashtag(tag, limit, offset);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(pins.stream().map(pin ->
+                        new PinResponse(
+                                pin.getId(),
+                                pin.getUserId(),
+                                pin.getDescription(),
+                                pin.getMediaId(),
+                                new ArrayList<>(pin.getHashtags()),
                                 pin.getCreatedAt()
                         )).toList()
                 );
@@ -83,6 +121,7 @@ public class PinController {
                     pin.getUserId(),
                     pin.getDescription(),
                     pin.getMediaId(),
+                    new ArrayList<>(),
                     pin.getCreatedAt()
                 )).toList()
             );
@@ -113,6 +152,7 @@ public class PinController {
                 pin.getUserId(),
                 pin.getDescription(),
                 pin.getMediaId(),
+                new ArrayList<>(pin.getHashtags()),
                 pin.getCreatedAt()
             ));
     }
@@ -134,11 +174,12 @@ public class PinController {
         return ResponseEntity.status(HttpStatus.OK)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new PinResponse(
-                pin.getId(),
-                pin.getUserId(),
-                pin.getDescription(),
-                pin.getMediaId(),
-                pin.getCreatedAt())
+                    pin.getId(),
+                    pin.getUserId(),
+                    pin.getDescription(),
+                    pin.getMediaId(),
+                    new ArrayList<>(pin.getHashtags()),
+                    pin.getCreatedAt())
             );
     }
 
@@ -178,6 +219,7 @@ public class PinController {
                 pin.getUserId(),
                 pin.getDescription(),
                 pin.getMediaId(),
+                view.equalsIgnoreCase("detail") ? new ArrayList<>(pin.getHashtags()) : new ArrayList<>(),
                 pin.getCreatedAt()
             ));
     }
