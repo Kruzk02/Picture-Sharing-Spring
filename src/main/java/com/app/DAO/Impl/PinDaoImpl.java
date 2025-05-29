@@ -1,13 +1,16 @@
 package com.app.DAO.Impl;
 
 import com.app.DAO.PinDao;
+import com.app.Model.Hashtag;
 import com.app.Model.Pin;
 import com.app.Model.SortType;
 import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -20,9 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Implementation of PinDao using Spring JDBC for data access.
@@ -47,6 +48,17 @@ public class PinDaoImpl implements PinDao {
         return jdbcTemplate.query(sql, new PinRowMapper(false, true), limit, offset);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public List<Pin> getAllPinsByHashtag(String tag, int limit, int offset) {
+        String sql = "SELECT p.id, p.user_id, p.media_id, p.created_at " +
+                "FROM pins p " +
+                "JOIN hashtags_pins hp ON p.id = hp.pin_id " +
+                "JOIN hashtags h ON hp.hashtag_id = h.id " +
+                "WHERE h.tag = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, new PinRowMapper(false, true), tag, limit, offset);
+    }
+
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public Pin save(Pin pin) {
@@ -63,13 +75,34 @@ public class PinDaoImpl implements PinDao {
             },keyHolder);
             if(row > 0){
                 pin.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
+                assignHashtagToPin(pin.getId(), pin.getHashtags());
                 return pin;
             }else{
                 return null;
             }
         }catch (Exception e){
+            e.printStackTrace();
             return null;
         }
+    }
+
+    private void assignHashtagToPin(Long pinId, Collection<Hashtag> hashtags) {
+        String sql = "INSERT INTO hashtags_pins(hashtag_id, pin_id) VALUES(?, ?)";
+        List<Hashtag> tags = hashtags.stream().toList();
+
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ps.setLong(1, tags.get(i).getId());
+                ps.setLong(2, pinId);
+            }
+
+            @Override
+            public int getBatchSize() {
+                return tags.size();
+            }
+        });
     }
 
     @Override
@@ -85,6 +118,13 @@ public class PinDaoImpl implements PinDao {
         if (pin.getMediaId() != 0) {
             sb.append("media_id = ?, ");
             params.add(pin.getMediaId());
+        }
+
+        if (pin.getHashtags() != null && !pin.getHashtags().isEmpty()) {
+            String sql = "DELETE FROM hashtags_pins WHERE pin_id = ?";
+            jdbcTemplate.update(sql, pin.getId());
+
+            assignHashtagToPin(pin.getId(), pin.getHashtags());
         }
 
         if (params.isEmpty()) {
@@ -108,8 +148,13 @@ public class PinDaoImpl implements PinDao {
     public Pin findById(Long id, boolean fetchDetails) {
         try {
             if (fetchDetails) {
-                String sql = "SELECT * FROM pins where id = ?";
-                return jdbcTemplate.queryForObject(sql, new PinRowMapper(true, true), id);
+                String sql = "SELECT p.id AS pin_id, p.user_id, p.description, p.media_id, p.created_at, " +
+                        "h.id AS hashtag_id, h.tag " +
+                        "FROM pins p " +
+                        "LEFT JOIN hashtags_pins hp ON hp.pin_id = p.id " +
+                        "LEFT JOIN hashtags h ON h.id = hp.hashtag_id " +
+                        "WHERE p.id = ?";
+                return jdbcTemplate.query(sql, new PinRSE(), id);
             } else {
                 String sql = "SELECT id, media_id, user_id, created_at FROM pins where id = ?";
                 return jdbcTemplate.queryForObject(sql, new PinRowMapper(false, true),id);
@@ -141,6 +186,36 @@ public class PinDaoImpl implements PinDao {
         }
     }
 }
+
+class PinRSE implements ResultSetExtractor<Pin> {
+    @Override
+    public Pin extractData(ResultSet rs) throws SQLException {
+        Pin pin = null;
+
+        while (rs.next()) {
+            if (pin == null) {
+                pin = new Pin();
+                pin.setId(rs.getLong("pin_id"));
+                pin.setUserId(rs.getLong("user_id"));
+                pin.setDescription(rs.getString("description"));
+                pin.setMediaId(rs.getLong("media_id"));
+                pin.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                pin.setHashtags(new ArrayList<>());
+            }
+
+            Long hashtagId = rs.getLong("hashtag_id");
+            if (!rs.wasNull()) {
+                Hashtag hashtag = new Hashtag();
+                hashtag.setId(hashtagId);
+                hashtag.setTag(rs.getString("tag"));
+                pin.getHashtags().add(hashtag);
+            }
+        }
+
+        return pin;
+    }
+}
+
 
 class PinRowMapper implements RowMapper<Pin> {
 

@@ -1,5 +1,6 @@
 package com.app.Service.impl;
 
+import com.app.DAO.HashtagDao;
 import com.app.DAO.MediaDao;
 import com.app.DAO.PinDao;
 import com.app.DAO.UserDao;
@@ -13,16 +14,15 @@ import com.app.utils.FileUtils;
 import com.app.utils.MediaUtils;
 import lombok.AllArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 /**
  * Pin Service class responsible for handling operations relates to Pins.<p>
@@ -36,6 +36,7 @@ public class PinServiceImpl implements PinService {
     private final PinDao pinDao;
     private final UserDao userDao;
     private final MediaDao mediaDao;
+    private final HashtagDao hashtagDao;
     private final MediaUtils mediaUtils;
     private final FileUtils fileUtils;
     private final RedisTemplate<String,Pin> pinRedisTemplate;
@@ -69,9 +70,42 @@ public class PinServiceImpl implements PinService {
     }
 
     @Override
+    public List<Pin> getAllPinsByHashtag(String tag, int limit, int offset) {
+        String redisKey = "pins_hashtag: " + tag;
+
+        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey, offset, offset - limit + 1);
+        if (cachedPin != null && !cachedPin.isEmpty()) {
+            return cachedPin;
+        }
+
+        List<Pin> pins = pinDao.getAllPinsByHashtag(tag, limit, offset);
+        if (pins.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        pinRedisTemplate.opsForList().rightPushAll(redisKey, pins);
+        pinRedisTemplate.expire(redisKey, Duration.ofHours(2));
+
+        return pins;
+    }
+
+    @Transactional
+    @Override
     public Pin save(PinRequest pinRequest) {
         if (pinRequest.file().isEmpty()) {
             throw new PinIsEmptyException("A pin must have file");
+        }
+
+        Set<String> tagsToFind = pinRequest.hashtags();
+        Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
+
+        List<Hashtag> hashtags = new ArrayList<>();
+        for (String tag : tagsToFind) {
+            Hashtag hashtag = tags.get(tag);
+            if (hashtag == null) {
+                hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
+            }
+            hashtags.add(hashtag);
         }
 
         String filename = mediaUtils.generateUniqueFilename(pinRequest.file().getOriginalFilename());
@@ -87,6 +121,7 @@ public class PinServiceImpl implements PinService {
                 .description(pinRequest.description())
                 .userId(getAuthenticatedUser().getId())
                 .mediaId(media.getId())
+                .hashtags(hashtags)
                 .build();
         return pinDao.save(pin);
     }
@@ -123,8 +158,20 @@ public class PinServiceImpl implements PinService {
                     .build());
         }
 
-        existingPin.setDescription(pinRequest.description() != null? pinRequest.description() : existingPin.getDescription());
+        Set<String> tagsToFind = pinRequest.hashtags();
+        Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
 
+        List<Hashtag> hashtags = new ArrayList<>();
+        for (String tag : tagsToFind) {
+            Hashtag hashtag = tags.get(tag);
+            if (hashtag == null) {
+                hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
+            }
+            hashtags.add(hashtag);
+        }
+
+        existingPin.setDescription(pinRequest.description() != null? pinRequest.description() : existingPin.getDescription());
+        existingPin.setHashtags(hashtags);
         return pinDao.update(id, existingPin);
     }
 

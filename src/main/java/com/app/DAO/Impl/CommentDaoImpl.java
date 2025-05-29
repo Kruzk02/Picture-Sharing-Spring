@@ -2,11 +2,14 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.CommentDao;
 import com.app.Model.Comment;
+import com.app.Model.Hashtag;
 import com.app.Model.SortType;
 import com.app.exception.sub.CommentNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -48,6 +52,7 @@ public class CommentDaoImpl implements CommentDao {
 
             if(row > 0){
                 comment.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
+                assignHashtagToComment(comment.getId(), comment.getHashtags());
                 return comment;
             }else {
                 return null;
@@ -55,6 +60,25 @@ public class CommentDaoImpl implements CommentDao {
         }catch (DataAccessException e){
             return null;
         }
+    }
+
+    private void assignHashtagToComment(Long commentId, Collection<Hashtag> hashtags) {
+        String sql = "INSERT INTO hashtags_comments(hashtag_id, comment_id) VALUES(?, ?)";
+        List<Hashtag> tags = hashtags.stream().toList();
+
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ps.setLong(1, tags.get(i).getId());
+                ps.setLong(2, commentId);
+            }
+
+            @Override
+            public int getBatchSize() {
+                return tags.size();
+            }
+        });
     }
 
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
@@ -71,6 +95,13 @@ public class CommentDaoImpl implements CommentDao {
         if (comment.getMediaId() != 0) {
             sb.append("media_id = ?, ");
             params.add(comment.getMediaId());
+        }
+
+        if (comment.getHashtags() != null && !comment.getHashtags().isEmpty()) {
+            String sql = "DELETE FROM hashtags_comments WHERe comment_id = ?";
+            jdbcTemplate.update(sql, comment.getId());
+
+            assignHashtagToComment(comment.getId(), comment.getHashtags());
         }
 
         if (params.isEmpty()) {
@@ -94,8 +125,13 @@ public class CommentDaoImpl implements CommentDao {
     public Comment findById(Long id, boolean fetchDetails) {
         try {
             if (fetchDetails) {
-                String sql = "SELECT * FROM comments WHERE id = ?";
-                return jdbcTemplate.queryForObject(sql, new CommentRowMapper(true, true, true), id);
+                String sql = "SELECT c.id AS comment_id, c.user_id, c.pin_id, c.created_at, " +
+                        "h.id AS hashtag_id, h.tag " +
+                        "FROM comments c " +
+                        "LEFT JOIN hashtags_comments hc ON hc.comment_id = c.id " +
+                        "LEFT JOIN hashtags h ON h.id = hc.hashtag_id " +
+                        "WHERE c.id = ?";
+                return jdbcTemplate.query(sql, new CommentRSE(), id);
             } else {
                 String sql = "SELECT id, user_id, pin_id, created_at FROM comments WHERE id = ?";
                 return jdbcTemplate.queryForObject(sql, new CommentRowMapper(false, false, true), id);
@@ -117,6 +153,16 @@ public class CommentDaoImpl implements CommentDao {
         }
     }
 
+    @Override
+    public List<Comment> findByHashtag(String tag, int limit, int offset) {
+        String sql = "SELECT c.id, c.user_id, c.pin_id, c.created_at " +
+                "FROM comments c " +
+                "JOIN hashtags_comments hc ON c.id = hc.comment_id " +
+                "JOIN hashtags h ON hc.hashtag_id = h.id " +
+                "WHERE h.tag = ? ORDER BY c.created_at DESC LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, new CommentRowMapper(false, false, true), tag, limit, offset);
+    }
+
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public int deleteById(Long id) {
@@ -126,6 +172,35 @@ public class CommentDaoImpl implements CommentDao {
         }catch (DataAccessException e){
             throw new CommentNotFoundException("Comment not found with a id: " + id);
         }
+    }
+}
+
+class CommentRSE implements ResultSetExtractor<Comment> {
+
+    @Override
+    public Comment extractData(ResultSet rs) throws SQLException, DataAccessException {
+        Comment comment = null;
+
+        while (rs.next()) {
+            if (comment == null) {
+                comment = Comment.builder()
+                    .id(rs.getLong("comment_id"))
+                    .userId(rs.getLong("user_id"))
+                    .pinId(rs.getLong("pin_id"))
+                    .created_at(rs.getTimestamp("created_at").toLocalDateTime())
+                    .hashtags(new ArrayList<>())
+                    .build();
+            }
+
+            if (!rs.wasNull()) {
+                Hashtag hashtag = Hashtag.builder()
+                        .id(rs.getLong("hashtag_id"))
+                        .tag(rs.getString("tag"))
+                        .build();
+                comment.getHashtags().add(hashtag);
+            }
+        }
+        return comment;
     }
 }
 

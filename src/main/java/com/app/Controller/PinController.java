@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -60,6 +62,7 @@ public class PinController {
                                 pin.getUserId(),
                                 pin.getDescription(),
                                 pin.getMediaId(),
+                                new ArrayList<>(),
                                 pin.getCreatedAt()
                         )).toList()
                 );
@@ -83,6 +86,7 @@ public class PinController {
                     pin.getUserId(),
                     pin.getDescription(),
                     pin.getMediaId(),
+                    new ArrayList<>(),
                     pin.getCreatedAt()
                 )).toList()
             );
@@ -113,6 +117,7 @@ public class PinController {
                 pin.getUserId(),
                 pin.getDescription(),
                 pin.getMediaId(),
+                new ArrayList<>(pin.getHashtags()),
                 pin.getCreatedAt()
             ));
     }
@@ -134,11 +139,12 @@ public class PinController {
         return ResponseEntity.status(HttpStatus.OK)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new PinResponse(
-                pin.getId(),
-                pin.getUserId(),
-                pin.getDescription(),
-                pin.getMediaId(),
-                pin.getCreatedAt())
+                    pin.getId(),
+                    pin.getUserId(),
+                    pin.getDescription(),
+                    pin.getMediaId(),
+                    new ArrayList<>(pin.getHashtags()),
+                    pin.getCreatedAt())
             );
     }
 
@@ -178,6 +184,7 @@ public class PinController {
                 pin.getUserId(),
                 pin.getDescription(),
                 pin.getMediaId(),
+                view.equalsIgnoreCase("detail") ? new ArrayList<>(pin.getHashtags()) : new ArrayList<>(),
                 pin.getCreatedAt()
             ));
     }
@@ -213,7 +220,8 @@ public class PinController {
                     id,
                     comment.getUserId(),
                     comment.getMediaId(),
-                    comment.getCreated_at()))
+                    comment.getCreated_at(),
+                    new ArrayList<>()))
                 .toList()
             );
     }

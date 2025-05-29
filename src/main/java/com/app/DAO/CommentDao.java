@@ -44,6 +44,14 @@ public interface CommentDao {
     List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset);
 
     /**
+     * Retrieves a list of comments by the ID of the associated hashtag.
+     * @param tag The hashtag of the pin
+     * @param limit The Maximum number of result to return
+     * @param offset The starting point for pagination
+     * @return a list of comments
+     */
+    List<Comment> findByHashtag(String tag, int limit, int offset);
+    /**
      * Deletes a comment by its id.
      * @param id The id of the comment to delete
      * @return the number of rows affected
