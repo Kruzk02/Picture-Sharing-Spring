@@ -8,6 +8,7 @@ import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
@@ -74,13 +75,34 @@ public class PinDaoImpl implements PinDao {
             },keyHolder);
             if(row > 0){
                 pin.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
+                assignHashtagToPin(pin.getId(), pin.getHashtags());
                 return pin;
             }else{
                 return null;
             }
         }catch (Exception e){
+            e.printStackTrace();
             return null;
         }
+    }
+
+    private void assignHashtagToPin(Long pinId, Collection<Hashtag> hashtags) {
+        String sql = "INSERT INTO hashtags_pins(hashtag_id, pin_id) VALUES(?, ?)";
+        List<Hashtag> tags = hashtags.stream().toList();
+
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ps.setLong(1, tags.get(i).getId());
+                ps.setLong(2, pinId);
+            }
+
+            @Override
+            public int getBatchSize() {
+                return tags.size();
+            }
+        });
     }
 
     @Override
@@ -96,6 +118,13 @@ public class PinDaoImpl implements PinDao {
         if (pin.getMediaId() != 0) {
             sb.append("media_id = ?, ");
             params.add(pin.getMediaId());
+        }
+
+        if (pin.getHashtags() != null && !pin.getHashtags().isEmpty()) {
+            String sql = "DELETE FROM hashtags_pins WHERE pin_id = ?";
+            jdbcTemplate.update(sql, pin.getId());
+
+            assignHashtagToPin(pin.getId(), pin.getHashtags());
         }
 
         if (params.isEmpty()) {
