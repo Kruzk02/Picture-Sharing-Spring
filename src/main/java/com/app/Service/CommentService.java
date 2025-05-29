@@ -14,5 +14,6 @@ public interface CommentService {
     SseEmitter createEmitter(long pinId);
     Comment findById(Long id, boolean fetchDetails);
     List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset);
+    List<Comment> findByHashtag(String tag, int limit, int offset);
     void deleteById(Long id);
 }

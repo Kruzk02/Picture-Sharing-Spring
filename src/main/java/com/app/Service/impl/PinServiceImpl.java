@@ -183,22 +183,22 @@ public class PinServiceImpl implements PinService {
      */
     @Override
     public Pin findById(Long id, boolean fetchDetails) {
-//        String cacheKey = fetchDetails ? "pin:" + id + ":details" : "pin:" + id + ":basic";
-//
-//        // Retrieved cache pin from redis
-//        Pin cachedPin = pinRedisTemplate.opsForValue().get(cacheKey);
-//
-//        if (cachedPin != null) {
-//            // Return cache pin if found
-//            return cachedPin;
-//        }
+        String cacheKey = fetchDetails ? "pin:" + id + ":details" : "pin:" + id + ":basic";
+
+        // Retrieved cache pin from redis
+        Pin cachedPin = pinRedisTemplate.opsForValue().get(cacheKey);
+
+        if (cachedPin != null) {
+            // Return cache pin if found
+            return cachedPin;
+        }
 
         // Fetch pin from the database and handle null safely
         Pin pin = Optional.ofNullable(pinDao.findById(id, fetchDetails))
                 .orElseThrow(() -> new PinNotFoundException("Pin not found with a id: " + id));
 
         // Store in cache for 2 hours
-//        pinRedisTemplate.opsForValue().set(cacheKey, pin, Duration.ofHours(2));
+        pinRedisTemplate.opsForValue().set(cacheKey, pin, Duration.ofHours(2));
 
         return pin;
     }
