@@ -51,7 +51,7 @@ public class PinDaoImpl implements PinDao {
     @Transactional(readOnly = true)
     @Override
     public List<Pin> getAllPinsByHashtag(String tag, int limit, int offset) {
-        String sql = "SELECT p.id AS pin_id, p.user_id, p.media_id, p.created_at " +
+        String sql = "SELECT p.id, p.user_id, p.media_id, p.created_at " +
                 "FROM pins p " +
                 "JOIN hashtags_pins hp ON p.id = hp.pin_id " +
                 "JOIN hashtags h ON hp.hashtag_id = h.id " +
