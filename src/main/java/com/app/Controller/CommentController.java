@@ -24,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -45,7 +46,7 @@ public class CommentController {
     public ResponseEntity<CommentResponse> findById(@PathVariable Long id, @RequestParam(defaultValue = "basic") String view) {
         Comment comment;
 
-        if ("details".equalsIgnoreCase(view)) {
+        if ("detail".equalsIgnoreCase(view)) {
             comment = commentService.findById(id, true);
         } else {
             comment = commentService.findById(id, false);
@@ -63,7 +64,8 @@ public class CommentController {
                 comment.getPinId(),
                 comment.getUserId(),
                 comment.getMediaId(),
-                comment.getCreated_at()
+                comment.getCreated_at(),
+                view.equalsIgnoreCase("detail") ? new ArrayList<>(comment.getHashtags()) : new ArrayList<>()
             ));
     }
 
@@ -127,7 +129,8 @@ public class CommentController {
                 comment.getPinId(),
                 comment.getUserId(),
                 comment.getMediaId(),
-                comment.getCreated_at()
+                comment.getCreated_at(),
+                comment.getHashtags().stream().toList()
             ));
     }
 
@@ -149,7 +152,8 @@ public class CommentController {
                 comment.getPinId(),
                 comment.getUserId(),
                 comment.getMediaId(),
-                comment.getCreated_at()
+                comment.getCreated_at(),
+                comment.getHashtags().stream().toList()
             ));
     }
 

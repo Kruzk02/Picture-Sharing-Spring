@@ -2,6 +2,7 @@ package com.app.Model;
 
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @NoArgsConstructor
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
-public class Hashtag {
+public class Hashtag implements Serializable {
     private Long id;
     private String tag;
     private LocalDateTime createdAt;

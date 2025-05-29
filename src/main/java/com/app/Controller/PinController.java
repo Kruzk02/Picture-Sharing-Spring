@@ -68,41 +68,6 @@ public class PinController {
                 );
     }
 
-    @Operation(summary = "Get all Pins")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully get all pins",
-                    content = {@Content(mediaType = "application/json", schema = @Schema(implementation = Pin.class))}),
-            @ApiResponse(responseCode = "500", description = "Internal server error",
-                    content = @Content(mediaType = "application/json"))
-    })
-    @GetMapping("/{tag}/hashtag")
-    public ResponseEntity<List<PinResponse>> getAllPinsByTag(
-            @Parameter(description = "tag of the pin", required = true)
-            @PathVariable String tag,
-            @Parameter(description = "Maximum number of pins to be retrieved")
-            @RequestParam(defaultValue = "10") int limit,
-            @Parameter(description = "Offset for pagination, indicating the starting point")
-            @RequestParam(defaultValue = "0") int offset
-    ) {
-        if (limit <= 0 || offset < 0) {
-            throw new IllegalArgumentException("Limit must be greater than 0 and offset must be non-negative.");
-        }
-
-        List<Pin> pins = pinService.getAllPinsByHashtag(tag, limit, offset);
-        return ResponseEntity.status(HttpStatus.OK)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(pins.stream().map(pin ->
-                        new PinResponse(
-                                pin.getId(),
-                                pin.getUserId(),
-                                pin.getDescription(),
-                                pin.getMediaId(),
-                                new ArrayList<>(pin.getHashtags()),
-                                pin.getCreatedAt()
-                        )).toList()
-                );
-    }
-
     @GetMapping("/{userId}/user")
     public ResponseEntity<List<PinResponse>> findPinByUserId(
         @Parameter(description = "id of the user whose pin are to be retrieved", required = true)
@@ -255,7 +220,8 @@ public class PinController {
                     id,
                     comment.getUserId(),
                     comment.getMediaId(),
-                    comment.getCreated_at()))
+                    comment.getCreated_at(),
+                    new ArrayList<>()))
                 .toList()
             );
     }
