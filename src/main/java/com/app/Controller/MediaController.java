@@ -3,7 +3,7 @@ package com.app.Controller;
 import com.app.Model.Media;
 import com.app.Model.MediaType;
 import com.app.Service.MediaService;
-import com.app.utils.MediaUtils;
+import com.app.storage.MediaManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,7 +29,6 @@ import java.nio.file.Paths;
 public class MediaController {
 
     private final MediaService mediaService;
-    private final MediaUtils mediaUtils;
 
     @Operation(summary = "Get a image or video by media id")
     @ApiResponses(value = {
@@ -57,8 +56,8 @@ public class MediaController {
                     .contentType(org.springframework.http.MediaType.parseMediaType(mineType))
                     .body(resource);
         } else {
-            Path videoPath = Paths.get(mediaUtils.getFilePath(), media.getUrl());
-            long size = mediaUtils.getFileSize(media.getUrl());
+            Path videoPath = Paths.get(MediaManager.getFilePath(), media.getUrl());
+            long size = MediaManager.getFileSize(media.getUrl());
 
             long start = 0;
             long end = size - 1;
@@ -78,7 +77,7 @@ public class MediaController {
                         .build();
             }
 
-            byte[] videoData = mediaUtils.readByRange(videoPath, start, end);
+            byte[] videoData = MediaManager.readByRange(videoPath, start, end);
 
             return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
                     .header("Content-Type", Files.probeContentType(videoPath))

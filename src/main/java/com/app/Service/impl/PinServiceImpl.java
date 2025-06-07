@@ -10,8 +10,8 @@ import com.app.Service.PinService;
 import com.app.exception.sub.PinIsEmptyException;
 import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
-import com.app.utils.FileUtils;
-import com.app.utils.MediaUtils;
+import com.app.storage.FileManager;
+import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
@@ -37,8 +37,6 @@ public class PinServiceImpl implements PinService {
     private final UserDao userDao;
     private final MediaDao mediaDao;
     private final HashtagDao hashtagDao;
-    private final MediaUtils mediaUtils;
-    private final FileUtils fileUtils;
     private final RedisTemplate<String,Pin> pinRedisTemplate;
 
     private User getAuthenticatedUser() {
@@ -108,10 +106,10 @@ public class PinServiceImpl implements PinService {
             hashtags.add(hashtag);
         }
 
-        String filename = mediaUtils.generateUniqueFilename(pinRequest.file().getOriginalFilename());
-        String extension = mediaUtils.getFileExtension(pinRequest.file().getOriginalFilename());
+        String filename = MediaManager.generateUniqueFilename(pinRequest.file().getOriginalFilename());
+        String extension = MediaManager.getFileExtension(pinRequest.file().getOriginalFilename());
 
-        fileUtils.save(pinRequest.file(), filename, extension);
+        FileManager.save(pinRequest.file(), filename, extension);
         Media media = mediaDao.save(Media.builder()
                 .url(filename)
                 .mediaType(MediaType.fromExtension(extension))
@@ -144,13 +142,13 @@ public class PinServiceImpl implements PinService {
 
         if (pinRequest.file() != null && !pinRequest.file().isEmpty()) {
             Media existingMedia = mediaDao.findById(existingPin.getMediaId());
-            String extensionOfExistingMedia = mediaUtils.getFileExtension(existingMedia.getUrl());
+            String extensionOfExistingMedia = MediaManager.getFileExtension(existingMedia.getUrl());
 
-            String filename = mediaUtils.generateUniqueFilename(pinRequest.file().getOriginalFilename());
-            String extension = mediaUtils.getFileExtension(pinRequest.file().getOriginalFilename());
+            String filename = MediaManager.generateUniqueFilename(pinRequest.file().getOriginalFilename());
+            String extension = MediaManager.getFileExtension(pinRequest.file().getOriginalFilename());
 
-            CompletableFuture.runAsync(() -> fileUtils.delete(existingMedia.getUrl(), extensionOfExistingMedia))
-                    .thenRunAsync(() -> fileUtils.save(pinRequest.file(), filename, extension));
+            CompletableFuture.runAsync(() -> FileManager.delete(existingMedia.getUrl(), extensionOfExistingMedia))
+                    .thenRunAsync(() -> FileManager.save(pinRequest.file(), filename, extension));
 
             mediaDao.update(existingPin.getMediaId(), Media.builder()
                     .url(filename)
@@ -245,7 +243,7 @@ public class PinServiceImpl implements PinService {
         }
 
         Media media = mediaDao.findById(pin.getMediaId());
-        fileUtils.delete(media.getUrl(), media.getMediaType().toString());
+        FileManager.delete(media.getUrl(), media.getMediaType().toString());
         mediaDao.deleteById(media.getId());
 
         pinRedisTemplate.delete("pin:" + id + ":basic");

@@ -13,8 +13,8 @@ import com.app.exception.sub.FileNotFoundException;
 import com.app.exception.sub.UserAlreadyExistsException;
 import com.app.exception.sub.UserNotFoundException;
 import com.app.message.producer.EmailEventProducer;
-import com.app.utils.FileUtils;
-import com.app.utils.MediaUtils;
+import com.app.storage.FileManager;
+import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -31,7 +31,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * User service class responsible for user related operations such as registration, login, and retrieval.<p>
@@ -48,8 +47,6 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final EmailEventProducer emailEventProducer;
-    private final FileUtils fileUtils;
-    private final MediaUtils mediaUtils;
 
     /**
      * Registers a new user based on the provided registerDTO.<p>
@@ -158,20 +155,20 @@ public class UserServiceImpl implements UserService {
     private void saveProfilePicture(User user, MultipartFile profilePicture) {
         Media existingMedia = mediaDao.findById(user.getMedia().getId());
 
-        String filename = mediaUtils.generateUniqueFilename(profilePicture.getOriginalFilename());
-        String extension = mediaUtils.getFileExtension(profilePicture.getOriginalFilename());
+        String filename = MediaManager.generateUniqueFilename(profilePicture.getOriginalFilename());
+        String extension = MediaManager.getFileExtension(profilePicture.getOriginalFilename());
 
         Media media;
 
-        fileUtils.save(profilePicture, filename, extension);
+        FileManager.save(profilePicture, filename, extension);
         if (Objects.equals(existingMedia.getUrl(), getDefaultProfilePicturePath().getUrl())) {
             media = mediaDao.save(Media.builder()
                     .url(filename)
                     .mediaType(MediaType.fromExtension(extension))
                     .build());
         } else {
-            String oldExtension = mediaUtils.getFileExtension(existingMedia.getUrl());
-            fileUtils.delete(existingMedia.getUrl(), oldExtension);
+            String oldExtension = MediaManager.getFileExtension(existingMedia.getUrl());
+            FileManager.delete(existingMedia.getUrl(), oldExtension);
 
             media = mediaDao.update(existingMedia.getId(), Media.builder()
                     .id(existingMedia.getId())

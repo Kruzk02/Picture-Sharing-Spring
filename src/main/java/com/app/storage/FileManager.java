@@ -1,4 +1,4 @@
-package com.app.utils;
+package com.app.storage;
 
 import com.app.Model.MediaType;
 import lombok.extern.log4j.Log4j2;
@@ -15,8 +15,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.concurrent.CompletableFuture;
 
 @Log4j2
-@Component
-public class FileUtils {
+public class FileManager {
 
     /**
      * Check if the directory for media type exists based on the provided file extension.
@@ -25,7 +24,7 @@ public class FileUtils {
      * @return Path the directory path where the file will be stored.
      * @throws IOException If an I/O error occurs while checking or creating the directory.
      */
-    private Path checkFolderExistsAndCreate(String extension) throws IOException {
+    private static Path checkFolderExistsAndCreate(String extension) throws IOException {
         Path path;
         if (MediaType.IMAGE.isFormatValid(extension)) {
             path = Paths.get("image");
@@ -58,7 +57,7 @@ public class FileUtils {
      * @throws IllegalArgumentException If any of the input parameters are null.
      */
     @Async
-    public CompletableFuture<Void> save(MultipartFile file, String filename, String extension) {
+    public static CompletableFuture<Void> save(MultipartFile file, String filename, String extension) {
         if (file == null || filename == null || extension == null) {
             throw new IllegalArgumentException("File, filename, and extension must not be null.");
         }
@@ -87,7 +86,7 @@ public class FileUtils {
      * @throws IllegalArgumentException If any of the input parameters are null.
      */
     @Async
-    public CompletableFuture<Void> delete(String filename, String extension) {
+    public static CompletableFuture<Void> delete(String filename, String extension) {
         if (filename == null || extension == null) {
             throw new IllegalArgumentException("File, filename, and extension must not be null.");
         }

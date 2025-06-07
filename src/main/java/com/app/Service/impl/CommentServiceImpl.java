@@ -10,8 +10,8 @@ import com.app.exception.sub.CommentNotFoundException;
 import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
 import com.app.message.producer.NotificationEventProducer;
-import com.app.utils.FileUtils;
-import com.app.utils.MediaUtils;
+import com.app.storage.FileManager;
+import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -35,8 +35,6 @@ public class CommentServiceImpl implements CommentService {
     private final PinDao pinDao;
     private final MediaDao mediaDao;
     private final HashtagDao hashtagDao;
-    private final MediaUtils mediaUtils;
-    private final FileUtils fileUtils;
     private final RedisTemplate<String, Comment> commentRedisTemplate;
     private final Map<Long, SseEmitter> emitters;
     private final NotificationEventProducer notificationEventProducer;
@@ -64,10 +62,10 @@ public class CommentServiceImpl implements CommentService {
             hashtags.add(hashtag);
         }
 
-        String filename = mediaUtils.generateUniqueFilename(request.media().getOriginalFilename());
-        String extension = mediaUtils.getFileExtension(request.media().getOriginalFilename());
+        String filename = MediaManager.generateUniqueFilename(request.media().getOriginalFilename());
+        String extension = MediaManager.getFileExtension(request.media().getOriginalFilename());
 
-        fileUtils.save(request.media(), filename, extension);
+        FileManager.save(request.media(), filename, extension);
         Media media = mediaDao.save(Media.builder()
                 .url(filename)
                 .mediaType(MediaType.fromExtension(extension))
@@ -128,13 +126,13 @@ public class CommentServiceImpl implements CommentService {
         commentRedisTemplate.delete("comments:" + id);
         if (request.media() != null && !request.media().isEmpty()) {
             Media existingMedia = mediaDao.findByCommentId(comment.getId());
-            String extensionOfExistingMedia = mediaUtils.getFileExtension(existingMedia.getUrl());
+            String extensionOfExistingMedia = MediaManager.getFileExtension(existingMedia.getUrl());
 
-            String filename = mediaUtils.generateUniqueFilename(request.media().getOriginalFilename());
-            String extension = mediaUtils.getFileExtension(request.media().getOriginalFilename());
+            String filename = MediaManager.generateUniqueFilename(request.media().getOriginalFilename());
+            String extension = MediaManager.getFileExtension(request.media().getOriginalFilename());
 
-            CompletableFuture.runAsync(() -> fileUtils.delete(existingMedia.getUrl(), extensionOfExistingMedia))
-                    .thenRunAsync(() -> fileUtils.save(request.media(), filename, extension));
+            CompletableFuture.runAsync(() -> FileManager.delete(existingMedia.getUrl(), extensionOfExistingMedia))
+                    .thenRunAsync(() -> FileManager.save(request.media(), filename, extension));
 
             mediaDao.update(comment.getMediaId(), Media.builder()
                     .url(filename)

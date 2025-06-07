@@ -4,7 +4,7 @@ import com.app.DAO.MediaDao;
 import com.app.DAO.PrivilegeDao;
 import com.app.DAO.RoleDao;
 import com.app.Model.*;
-import com.app.utils.MediaUtils;
+import com.app.storage.MediaManager;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
@@ -37,17 +37,15 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
     private final PrivilegeDao privilegeDao;
     private final MediaDao mediaDao;
     private final PasswordEncoder passwordEncoder;
-    private final MediaUtils mediaUtils;
     private boolean alreadySetup = false;
 
     @Autowired
-    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDao roleDao, PrivilegeDao privilegeDao, MediaDao mediaDao, PasswordEncoder passwordEncoder, MediaUtils mediaUtils) {
+    public DatabaseInitializationService(JdbcTemplate jdbcTemplate, RoleDao roleDao, PrivilegeDao privilegeDao, MediaDao mediaDao, PasswordEncoder passwordEncoder) {
         this.jdbcTemplate = jdbcTemplate;
         this.roleDao = roleDao;
         this.privilegeDao = privilegeDao;
         this.mediaDao = mediaDao;
         this.passwordEncoder = passwordEncoder;
-        this.mediaUtils = mediaUtils;
     }
 
     @Override
@@ -80,7 +78,7 @@ public class DatabaseInitializationService implements ApplicationListener<Contex
         Role roleUser = createRoleIfNotFound("ROLE_USER", List.of(readPrivilege));
 
         Resource defaultProfilePic = new FileSystemResource("profile_picture/default_profile_picture.png");
-        String extension = mediaUtils.getFileExtension(defaultProfilePic.getFilename());
+        String extension = MediaManager.getFileExtension(defaultProfilePic.getFilename());
 
         Media media = mediaDao.save(Media.builder()
                 .url(defaultProfilePic.getFilename())

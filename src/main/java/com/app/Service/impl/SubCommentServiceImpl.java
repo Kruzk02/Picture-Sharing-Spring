@@ -13,8 +13,8 @@ import com.app.exception.sub.CommentNotFoundException;
 import com.app.exception.sub.SubCommentNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
 import com.app.message.producer.NotificationEventProducer;
-import com.app.utils.FileUtils;
-import com.app.utils.MediaUtils;
+import com.app.storage.FileManager;
+import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
@@ -33,8 +33,6 @@ public class SubCommentServiceImpl implements SubCommentService {
     private final CommentDao commentDao;
     private final UserDao userDao;
     private final MediaDao mediaDao;
-    private final MediaUtils mediaUtils;
-    private final FileUtils fileUtils;
     private final RedisTemplate<String,SubComment> subCommentRedisTemplate;
     private final NotificationEventProducer notificationEventProducer;
 
@@ -46,10 +44,10 @@ public class SubCommentServiceImpl implements SubCommentService {
     @Override
     public SubComment save(CreateSubCommentRequest request) {
 
-        String filename = mediaUtils.generateUniqueFilename(request.file().getOriginalFilename());
-        String extension = mediaUtils.getFileExtension(request.file().getOriginalFilename());
+        String filename = MediaManager.generateUniqueFilename(request.file().getOriginalFilename());
+        String extension = MediaManager.getFileExtension(request.file().getOriginalFilename());
 
-        fileUtils.save(request.file(), filename, extension);
+        FileManager.save(request.file(), filename, extension);
         Media media = mediaDao.save(Media.builder()
                 .url(filename)
                 .mediaType(MediaType.fromExtension(extension))
@@ -97,13 +95,13 @@ public class SubCommentServiceImpl implements SubCommentService {
         subCommentRedisTemplate.delete("subComment:" + id);
 
         if (request.media() != null && !request.media().isEmpty()) {
-            String extensionOfMedia = mediaUtils.getFileExtension(subComment.getMedia().getUrl());
+            String extensionOfMedia = MediaManager.getFileExtension(subComment.getMedia().getUrl());
 
-            String filename = mediaUtils.generateUniqueFilename(request.media().getOriginalFilename());
-            String extension = mediaUtils.getFileExtension(request.media().getOriginalFilename());
+            String filename = MediaManager.generateUniqueFilename(request.media().getOriginalFilename());
+            String extension = MediaManager.getFileExtension(request.media().getOriginalFilename());
 
-            CompletableFuture.runAsync(() -> fileUtils.delete(subComment.getMedia().getUrl(), extensionOfMedia)
-                    .thenRunAsync(() -> fileUtils.save(request.media(), filename, extension)));
+            CompletableFuture.runAsync(() -> FileManager.delete(subComment.getMedia().getUrl(), extensionOfMedia)
+                    .thenRunAsync(() -> FileManager.save(request.media(), filename, extension)));
 
             mediaDao.update(subComment.getMedia().getId(), Media.builder()
                     .url(filename)
