@@ -27,9 +27,6 @@ services:
       - kafka
     volumes:
       - .:/app
-    environment:
-      - JAVA_OPTS=-Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true
-      - SPRING_PROFILES_ACTIVE=dev
     env_file:
       - .env
     networks:
