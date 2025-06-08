@@ -13,6 +13,7 @@ import com.app.exception.sub.UserNotMatchException;
 import com.app.storage.FileManager;
 import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
  * This class interacts with the PinDaoImpl for data access,
  * and utilizes ModelMapper for mapping between DTOs and entity objects.
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class PinServiceImpl implements PinService {
@@ -63,7 +65,7 @@ public class PinServiceImpl implements PinService {
 
         pinRedisTemplate.opsForList().rightPushAll(redisKey, pins);
         pinRedisTemplate.expire(redisKey,Duration.ofHours(2));
-
+        log.info(String.valueOf(pinRedisTemplate.hasKey("pins")));
         return pins;
     }
 

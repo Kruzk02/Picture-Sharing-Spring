@@ -22,10 +22,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Qualifier(value = "jwtAccessToken") private final JwtProvider jwtProvider;
     private final CustomUserDetailsService customUserDetailsService;
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
-    public JwtAuthenticationFilter(JwtAccessToken jwtProvider, CustomUserDetailsService customUserDetailsService, RedisTemplate<Object, Object> redisTemplate) {
+    public JwtAuthenticationFilter(JwtAccessToken jwtProvider, CustomUserDetailsService customUserDetailsService, RedisTemplate<String, Object> redisTemplate) {
         this.jwtProvider = jwtProvider;
         this.customUserDetailsService = customUserDetailsService;
         this.redisTemplate = redisTemplate;
@@ -42,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             username = jwtProvider.extractUsernameFromToken(token);
         }
 
-        if (Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:" + token))) {
+        if (redisTemplate.hasKey("blacklist:" + token)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }

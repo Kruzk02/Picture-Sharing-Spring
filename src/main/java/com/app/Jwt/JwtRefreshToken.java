@@ -29,10 +29,10 @@ public class JwtRefreshToken implements JwtProvider {
     @Value("${refresh.token.expiry.default:7}")
     private long defaultExpiryDays;
 
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
-    public JwtRefreshToken(RedisTemplate<Object, Object> redisTemplate) {
+    public JwtRefreshToken(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 

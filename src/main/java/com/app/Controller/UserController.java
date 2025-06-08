@@ -45,11 +45,11 @@ public class UserController {
     private final NotificationService notificationService;
     @Qualifier(value = "jwtAccessToken") private final JwtProvider jwtAccessToken;
     @Qualifier(value = "jwtRefreshToken") private final JwtProvider jwtRefreshToken;
-    private final RedisTemplate<Object,Object> redisTemplate;
+    private final RedisTemplate<String,Object> redisTemplate;
 
 
     @Autowired
-    public UserController(UserService userService, BoardService boardService, FollowerService followerService, NotificationService notificationService, JwtProvider jwtAccessToken, JwtProvider jwtRefreshToken, RedisTemplate<Object, Object> redisTemplate) {
+    public UserController(UserService userService, BoardService boardService, FollowerService followerService, NotificationService notificationService, JwtProvider jwtAccessToken, JwtProvider jwtRefreshToken, RedisTemplate<String , Object> redisTemplate) {
         this.userService = userService;
         this.boardService = boardService;
         this.followerService = followerService;

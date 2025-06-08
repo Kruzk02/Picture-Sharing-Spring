@@ -16,7 +16,7 @@ import java.time.Duration;
 public class MediaServiceImpl implements MediaService {
 
     private final MediaDao mediaDao;
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public Media findById(Long id) {
