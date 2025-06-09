@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 /**
  * Pin Service class responsible for handling operations relates to Pins.<p>
@@ -45,48 +46,46 @@ public class PinServiceImpl implements PinService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userDao.findUserByUsername(authentication.getName());
     }
+
+    private List<Pin> getCachedOrDb(String redisKey, int limit, int offset, Supplier<List<Pin>> dbSupplier, Duration ttl) {
+        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey, offset, offset - limit + 1);
+        if (cachedPin != null && !cachedPin.isEmpty()) {
+            return cachedPin;
+        }
+
+        List<Pin> data = dbSupplier.get();
+        if (data != null && !data.isEmpty()) {
+            pinRedisTemplate.opsForList().rightPushAll(redisKey, data);
+            pinRedisTemplate.expire(redisKey, ttl);
+        }
+        return data;
+    }
+
     /**
      * Retrieves all pins.
      *
      * @return A List of all pins.
      */
     public List<Pin> getAllPins(SortType sortType, int limit, int offset) {
-        String redisKey = "pins:" + sortType;
+        String redisKey = "pins:" + sortType + ":limit:" + limit + ":offset:" + offset;
 
-        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey,offset, offset - limit + 1);
-        if (cachedPin != null && !cachedPin.isEmpty()) {
-            return cachedPin;
-        }
-
-        List<Pin> pins = pinDao.getAllPins(sortType, limit, offset);
-        if (pins.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        pinRedisTemplate.opsForList().rightPushAll(redisKey, pins);
-        pinRedisTemplate.expire(redisKey,Duration.ofHours(2));
-        log.info(String.valueOf(pinRedisTemplate.hasKey("pins")));
-        return pins;
+        return getCachedOrDb(redisKey,
+                limit,
+                offset,
+                () -> pinDao.getAllPins(sortType, limit, offset),
+                Duration.ofHours(2)
+        );
     }
 
     @Override
     public List<Pin> getAllPinsByHashtag(String tag, int limit, int offset) {
-        String redisKey = "pins_hashtag: " + tag;
-
-        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey, offset, offset - limit + 1);
-        if (cachedPin != null && !cachedPin.isEmpty()) {
-            return cachedPin;
-        }
-
-        List<Pin> pins = pinDao.getAllPinsByHashtag(tag, limit, offset);
-        if (pins.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        pinRedisTemplate.opsForList().rightPushAll(redisKey, pins);
-        pinRedisTemplate.expire(redisKey, Duration.ofHours(2));
-
-        return pins;
+        String redisKey = "pins_hashtag: " + tag + ":limit:" + ":offset:" + offset ;
+        return getCachedOrDb(redisKey,
+                limit,
+                offset,
+                () -> pinDao.getAllPinsByHashtag(tag, limit, offset),
+                Duration.ofHours(2)
+        );
     }
 
     @Transactional
@@ -212,22 +211,15 @@ public class PinServiceImpl implements PinService {
      */
     @Override
     public List<Pin> findPinByUserId(Long userId, int limit, int offset) {
-        String redisKey = "pins:user:" + userId;
+        String redisKey = "user:" + userId + ":pins";
 
-        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey,offset, offset + limit - 1);
-        if (cachedPin != null && !cachedPin.isEmpty()) {
-            return cachedPin;
-        }
-
-        List<Pin> pins = pinDao.findPinByUserId(userId, limit, offset);
-        if (pins.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        pinRedisTemplate.opsForList().rightPushAll(redisKey, pins);
-        pinRedisTemplate.expire(redisKey,Duration.ofHours(2));
-
-        return pins;
+        return getCachedOrDb(
+                redisKey,
+                limit,
+                offset,
+                () -> pinDao.findPinByUserId(userId, limit, offset),
+                Duration.ofHours(2)
+        );
     }
 
     @Override
@@ -250,9 +242,7 @@ public class PinServiceImpl implements PinService {
 
         pinRedisTemplate.delete("pin:" + id + ":basic");
         pinRedisTemplate.delete("pin:" + id + ":details");
-        pinRedisTemplate.delete("pins:" + SortType.NEWEST);
-        pinRedisTemplate.delete("pins:" + SortType.OLDEST);
-        pinRedisTemplate.delete("pins:user:" + pin.getUserId());
+        pinRedisTemplate.delete("user:" + pin.getUserId() + ":pins");
         pinDao.deleteById(id);
     }
 }
