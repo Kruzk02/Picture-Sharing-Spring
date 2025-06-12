@@ -14,6 +14,7 @@ import com.app.storage.FileManager;
 import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +34,7 @@ import java.util.function.Supplier;
  */
 @Slf4j
 @Service
+@Qualifier("pinServiceImpl")
 @AllArgsConstructor
 public class PinServiceImpl implements PinService {
 
@@ -40,52 +42,23 @@ public class PinServiceImpl implements PinService {
     private final UserDao userDao;
     private final MediaDao mediaDao;
     private final HashtagDao hashtagDao;
-    private final RedisTemplate<String,Pin> pinRedisTemplate;
 
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userDao.findUserByUsername(authentication.getName());
     }
-
-    private List<Pin> getCachedOrDb(String redisKey, int limit, int offset, Supplier<List<Pin>> dbSupplier, Duration ttl) {
-        List<Pin> cachedPin = pinRedisTemplate.opsForList().range(redisKey, offset, offset - limit + 1);
-        if (cachedPin != null && !cachedPin.isEmpty()) {
-            return cachedPin;
-        }
-
-        List<Pin> data = dbSupplier.get();
-        if (data != null && !data.isEmpty()) {
-            pinRedisTemplate.opsForList().rightPushAll(redisKey, data);
-            pinRedisTemplate.expire(redisKey, ttl);
-        }
-        return data;
-    }
-
     /**
      * Retrieves all pins.
      *
      * @return A List of all pins.
      */
     public List<Pin> getAllPins(SortType sortType, int limit, int offset) {
-        String redisKey = "pins:" + sortType + ":limit:" + limit + ":offset:" + offset;
-
-        return getCachedOrDb(redisKey,
-                limit,
-                offset,
-                () -> pinDao.getAllPins(sortType, limit, offset),
-                Duration.ofHours(2)
-        );
+        return pinDao.getAllPins(sortType,limit,offset);
     }
 
     @Override
     public List<Pin> getAllPinsByHashtag(String tag, int limit, int offset) {
-        String redisKey = "pins_hashtag: " + tag + ":limit:" + ":offset:" + offset ;
-        return getCachedOrDb(redisKey,
-                limit,
-                offset,
-                () -> pinDao.getAllPinsByHashtag(tag, limit, offset),
-                Duration.ofHours(2)
-        );
+        return pinDao.getAllPinsByHashtag(tag, limit, offset);
     }
 
     @Transactional
@@ -138,9 +111,6 @@ public class PinServiceImpl implements PinService {
             throw new UserNotMatchException("User does not matching with a pin owner");
         }
 
-        pinRedisTemplate.delete("pin:" + id + ":basic");
-        pinRedisTemplate.delete("pin:" + id + ":details");
-
         if (pinRequest.file() != null && !pinRequest.file().isEmpty()) {
             Media existingMedia = mediaDao.findById(existingPin.getMediaId());
             String extensionOfExistingMedia = MediaManager.getFileExtension(existingMedia.getUrl());
@@ -182,24 +152,7 @@ public class PinServiceImpl implements PinService {
      */
     @Override
     public Pin findById(Long id, boolean fetchDetails) {
-        String cacheKey = fetchDetails ? "pin:" + id + ":details" : "pin:" + id + ":basic";
-
-        // Retrieved cache pin from redis
-        Pin cachedPin = pinRedisTemplate.opsForValue().get(cacheKey);
-
-        if (cachedPin != null) {
-            // Return cache pin if found
-            return cachedPin;
-        }
-
-        // Fetch pin from the database and handle null safely
-        Pin pin = Optional.ofNullable(pinDao.findById(id, fetchDetails))
-                .orElseThrow(() -> new PinNotFoundException("Pin not found with a id: " + id));
-
-        // Store in cache for 2 hours
-        pinRedisTemplate.opsForValue().set(cacheKey, pin, Duration.ofHours(2));
-
-        return pin;
+        return pinDao.findById(id, fetchDetails);
     }
 
     /**
@@ -211,15 +164,7 @@ public class PinServiceImpl implements PinService {
      */
     @Override
     public List<Pin> findPinByUserId(Long userId, int limit, int offset) {
-        String redisKey = "user:" + userId + ":pins";
-
-        return getCachedOrDb(
-                redisKey,
-                limit,
-                offset,
-                () -> pinDao.findPinByUserId(userId, limit, offset),
-                Duration.ofHours(2)
-        );
+        return pinDao.findPinByUserId(userId, limit, offset);
     }
 
     @Override
@@ -240,9 +185,6 @@ public class PinServiceImpl implements PinService {
         FileManager.delete(media.getUrl(), media.getMediaType().toString());
         mediaDao.deleteById(media.getId());
 
-        pinRedisTemplate.delete("pin:" + id + ":basic");
-        pinRedisTemplate.delete("pin:" + id + ":details");
-        pinRedisTemplate.delete("user:" + pin.getUserId() + ":pins");
         pinDao.deleteById(id);
     }
 }
