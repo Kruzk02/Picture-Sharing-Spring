@@ -37,6 +37,7 @@ public class CachedCommentService extends CachedServiceHelper<Comment> implement
     @Override
     public Comment update(Long id, UpdatedCommentRequest request) {
         var comment = commentService.update(id, request);
+        super.delete("comment:" + id + ":details");
         var cached = super.getOrLoad("comment:" + comment.getId() + ":details", () -> comment, Duration.ofHours(2));
         return cached.orElse(comment);
     }
