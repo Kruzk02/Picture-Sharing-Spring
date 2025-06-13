@@ -16,24 +16,23 @@ import com.app.message.producer.NotificationEventProducer;
 import com.app.storage.FileManager;
 import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @Service
 @AllArgsConstructor
+@Qualifier("subCommentServiceImpl")
 public class SubCommentServiceImpl implements SubCommentService {
 
     private final SubCommentDao subCommentDao;
     private final CommentDao commentDao;
     private final UserDao userDao;
     private final MediaDao mediaDao;
-    private final RedisTemplate<String,SubComment> subCommentRedisTemplate;
     private final NotificationEventProducer notificationEventProducer;
 
     private User getAuthenticationUser() {
@@ -66,7 +65,6 @@ public class SubCommentServiceImpl implements SubCommentService {
                 .build();
 
         SubComment savedSubComment = subCommentDao.save(subComment);
-        subCommentRedisTemplate.opsForValue().set("subComment:" + savedSubComment.getId(),savedSubComment, Duration.ofHours(2));
 
         notificationEventProducer.send(Notification.builder()
                 .userId(comment.getUserId())
@@ -92,8 +90,6 @@ public class SubCommentServiceImpl implements SubCommentService {
             throw new CommentIsEmptyException("A comment must have either content or a media attachment.");
         }
 
-        subCommentRedisTemplate.delete("subComment:" + id);
-
         if (request.media() != null && !request.media().isEmpty()) {
             String extensionOfMedia = MediaManager.getFileExtension(subComment.getMedia().getUrl());
 
@@ -113,45 +109,20 @@ public class SubCommentServiceImpl implements SubCommentService {
             subComment.setContent(request.content());
         }
 
-        subCommentRedisTemplate.opsForValue().set("subComment:" + id, subComment, Duration.ofHours(2));
         return subCommentDao.update(id, subComment);
     }
 
     @Override
     public SubComment findById(long id) {
-        String cacheKey = "subComment:" + id;
-
-        SubComment cacheSubComment = subCommentRedisTemplate.opsForValue().get(cacheKey);
-        if (cacheSubComment != null) {
-            return cacheSubComment;
-        }
-
-        SubComment subComment = subCommentDao.findById(id);
-        if (subComment == null) {
-            throw new SubCommentNotFoundException("Sub comment not found with a id: " + id);
-        }
-
-        subCommentRedisTemplate.opsForValue().set(cacheKey,subComment,Duration.ofHours(2));
-        return subComment;
+        return subCommentDao.findById(id);
     }
 
     @Override
     public List<SubComment> findAllByCommentId(long commentId, SortType sortType, int limit, int offset) {
-        String redisKey = "comment:" + commentId + ":subComments:" + sortType;
-        
-        List<SubComment> cachedSubComment = subCommentRedisTemplate.opsForList().range(redisKey, offset, offset + limit - 1);
-        if (cachedSubComment != null && !cachedSubComment.isEmpty()) {
-            return cachedSubComment;
-        }
-
         List<SubComment> subComments = subCommentDao.findAllByCommentId(commentId, sortType, limit, offset);
         if (subComments.isEmpty()) {
             return Collections.emptyList();
         }
-
-        subCommentRedisTemplate.opsForList().rightPushAll(redisKey, subComments);
-        subCommentRedisTemplate.expire(redisKey, Duration.ofHours(2));
-
         return subComments;
     }
 
@@ -166,8 +137,6 @@ public class SubCommentServiceImpl implements SubCommentService {
             throw new UserNotMatchException("Authenticated user does not own the sub comment");
         }
 
-        System.out.println(subComment.getComment().getId());
-        subCommentRedisTemplate.delete("subComment:" + id);
         subCommentDao.deleteById(id);
     }
 }
