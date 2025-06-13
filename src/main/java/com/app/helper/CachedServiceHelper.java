@@ -45,7 +45,7 @@ public abstract class CachedServiceHelper<T> {
     }
 
     protected List<T> getListRange(String key, int limit, int offset) {
-        return redisTemplate.opsForList().range(key, offset, offset - limit + 1);
+        return redisTemplate.opsForList().range(key, offset, offset + limit - 1);
     }
 
     protected T popFromList(String key) {
