@@ -46,7 +46,7 @@ public class CommentController {
     public ResponseEntity<CommentResponse> findById(@PathVariable Long id, @RequestParam(defaultValue = "basic") String view) {
         Comment comment;
 
-        if ("detail".equalsIgnoreCase(view)) {
+        if ("details".equalsIgnoreCase(view)) {
             comment = commentService.findById(id, true);
         } else {
             comment = commentService.findById(id, false);

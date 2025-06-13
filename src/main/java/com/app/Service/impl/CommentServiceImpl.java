@@ -14,19 +14,19 @@ import com.app.storage.FileManager;
 import com.app.storage.MediaManager;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @Log4j2
 @Service
+@Qualifier("commentServiceImpl")
 @AllArgsConstructor
 public class CommentServiceImpl implements CommentService {
 
@@ -35,7 +35,6 @@ public class CommentServiceImpl implements CommentService {
     private final PinDao pinDao;
     private final MediaDao mediaDao;
     private final HashtagDao hashtagDao;
-    private final RedisTemplate<String, Comment> commentRedisTemplate;
     private final Map<Long, SseEmitter> emitters;
     private final NotificationEventProducer notificationEventProducer;
 
@@ -123,7 +122,6 @@ public class CommentServiceImpl implements CommentService {
             throw new CommentIsEmptyException("A comment must have either content or a media attachment.");
         }
 
-        commentRedisTemplate.delete("comments:" + id);
         if (request.media() != null && !request.media().isEmpty()) {
             Media existingMedia = mediaDao.findByCommentId(comment.getId());
             String extensionOfExistingMedia = MediaManager.getFileExtension(existingMedia.getUrl());
@@ -193,23 +191,7 @@ public class CommentServiceImpl implements CommentService {
      */
     @Override
     public Comment findById(Long id, boolean fetchDetails) {
-        String cacheKey = fetchDetails ? "comment:" + id + ":details" : "comment:" + id;
-
-        // Retrieved cache comment from redis
-        Comment cacheComment = commentRedisTemplate.opsForValue().get(cacheKey);
-
-        if (cacheComment != null) {
-            // Return cache comment if found
-            return cacheComment;
-        }
-
-        // Fetch comment from the database
-        Comment comment = Optional.ofNullable(commentDao.findById(id, fetchDetails))
-                .orElseThrow(() -> new CommentNotFoundException("Comment not found with a id: " + id));
-
-        // Store in cache for 2 hours
-        commentRedisTemplate.opsForValue().set(cacheKey, comment, Duration.ofHours(2));
-        return comment;
+        return commentDao.findById(id, fetchDetails);
     }
 
     /**
@@ -222,41 +204,19 @@ public class CommentServiceImpl implements CommentService {
      */
     @Override
     public List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset) {
-        String redisKeys = "pins:" + pinId + ":comments" + sortType;
-
-        List<Comment> cachedComments = commentRedisTemplate.opsForList().range(redisKeys, offset, offset + limit - 1);
-        if (cachedComments != null && !cachedComments.isEmpty()) {
-            return cachedComments;
-        }
-
-        List<Comment> comments = commentDao.findByPinId(pinId, sortType, limit, offset);
+        var comments = commentDao.findByPinId(pinId, sortType, limit, offset);
         if (comments.isEmpty()) {
             return Collections.emptyList();
         }
-
-        commentRedisTemplate.opsForList().rightPushAll(redisKeys, comments);
-        commentRedisTemplate.expire(redisKeys, Duration.ofHours(2));
-
         return comments;
     }
 
     @Override
     public List<Comment> findByHashtag(String tag, int limit, int offset) {
-        String redisKeys = "comments_hashtag:" + tag;
-
-        List<Comment> cachedComments = commentRedisTemplate.opsForList().range(redisKeys, offset, offset + limit - 1);
-        if (cachedComments != null && !cachedComments.isEmpty()) {
-            return cachedComments;
-        }
-
-        List<Comment> comments = commentDao.findByHashtag(tag, limit, offset);
+        var comments = commentDao.findByHashtag(tag, limit, offset);
         if (comments.isEmpty()) {
             return Collections.emptyList();
         }
-
-        commentRedisTemplate.opsForList().rightPushAll(redisKeys, comments);
-        commentRedisTemplate.expire(redisKeys, Duration.ofHours(2));
-
         return comments;
     }
 
@@ -279,8 +239,5 @@ public class CommentServiceImpl implements CommentService {
         }
 
         commentDao.deleteById(comment.getId());
-        commentRedisTemplate.delete("comment:" + id);
-        commentRedisTemplate.delete("comment:" + id + ":details");
-        commentRedisTemplate.delete("comment:" + id + ":subComments");
     }
 }
