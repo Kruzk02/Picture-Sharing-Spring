@@ -6,5 +6,4 @@ import java.util.List;
 
 public interface MediaService {
     Media findById(Long id);
-    Media findByCommentId(Long commentId);
 }
