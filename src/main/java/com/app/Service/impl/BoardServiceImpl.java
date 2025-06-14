@@ -10,6 +10,7 @@ import com.app.Model.User;
 import com.app.Service.BoardService;
 import com.app.exception.sub.*;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,13 +25,13 @@ import java.util.*;
  * and utilizes ModelMapper for mapping between DTOs and entity objects.
  */
 @Service
+@Qualifier("boardServiceImpl")
 @AllArgsConstructor
 public class BoardServiceImpl implements BoardService {
 
     private final BoardDao boardDao;
     private final PinDao pinDao;
     private final UserDao userDao;
-    private final RedisTemplate<String,Board> boardRedisTemplate;
 
     private User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -139,11 +140,8 @@ public class BoardServiceImpl implements BoardService {
             throw new UserNotMatchException("Authenticated user not own this board");
         }
 
-        boardRedisTemplate.delete("board:" + existingBoard.getId());
-
         existingBoard.setName(name != null ? name : existingBoard.getName());
 
-        boardRedisTemplate.opsForValue().set("board:" + existingBoard.getId(),existingBoard, Duration.ofHours(2));
         return boardDao.update(existingBoard, id);
     }
 
@@ -155,32 +153,19 @@ public class BoardServiceImpl implements BoardService {
      */
     @Override
     public Board findById(Long id){
-        Board cacheBoard = boardRedisTemplate.opsForValue().get("board:" + id);
-        if (cacheBoard != null) return cacheBoard;
-
         Board board = boardDao.findById(id);
-        if (board != null) {
-            boardRedisTemplate.opsForValue().set("board:" + board.getId(),board, Duration.ofHours(2));
+        if (board == null) {
+            throw new BoardNotFoundException("Board not found with a id: " + id);
         }
-
         return board;
     }
 
     @Override
     public List<Board> findAllByUserId(Long userId, int limit, int offset) {
-        String cacheKeys = "board:user:" + userId;
-        List<Board> cachedBoards = boardRedisTemplate.opsForList().range(cacheKeys, offset, offset + limit - 1);
-        if (cachedBoards != null && !cachedBoards.isEmpty()) {
-            return cachedBoards;
-        }
-
         List<Board> boards = boardDao.findAllByUserId(userId,limit,offset);
         if (boards.isEmpty()) {
             return Collections.emptyList();
         }
-
-        boardRedisTemplate.opsForList().rightPushAll(cacheKeys, boards);
-        boardRedisTemplate.expire(cacheKeys, Duration.ofHours(1));
 
         return boards;
     }

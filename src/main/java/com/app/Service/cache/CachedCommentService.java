@@ -68,7 +68,6 @@ public class CachedCommentService extends CachedServiceHelper<Comment> implement
 
     @Override
     public void deleteById(Long id) {
-        var comment = commentService.findById(id, false);
         super.delete("comment:" + id + ":details");
         super.delete("comment:" + id);
     }
