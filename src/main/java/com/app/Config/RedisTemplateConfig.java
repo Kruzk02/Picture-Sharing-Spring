@@ -1,9 +1,6 @@
 package com.app.Config;
 
-import com.app.Model.Board;
-import com.app.Model.Comment;
-import com.app.Model.Pin;
-import com.app.Model.SubComment;
+import com.app.Model.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -45,7 +42,12 @@ public class RedisTemplateConfig {
     }
 
     @Bean
-    public RedisTemplate<String, Board> BoardRedisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, Board> boardRedisTemplate(RedisConnectionFactory connectionFactory) {
+        return createRedisTemplate(connectionFactory);
+    }
+
+    @Bean
+    public RedisTemplate<String, Media> mediaRedisTemplate(RedisConnectionFactory connectionFactory) {
         return createRedisTemplate(connectionFactory);
     }
 }
