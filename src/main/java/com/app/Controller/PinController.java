@@ -68,30 +68,6 @@ public class PinController {
                 );
     }
 
-    @GetMapping("/{userId}/user")
-    public ResponseEntity<List<PinResponse>> findPinByUserId(
-        @Parameter(description = "id of the user whose pin are to be retrieved", required = true)
-        @PathVariable Long userId,
-        @Parameter(description = "Maximum number of pins to be retrieved")
-        @RequestParam(defaultValue = "10") int limit,
-        @Parameter(description = "Offset for pagination, indicating the starting point")
-        @RequestParam(defaultValue = "0") int offset
-    ) {
-        List<Pin> pins = pinService.findPinByUserId(userId, limit, offset);
-        return ResponseEntity.status(HttpStatus.OK)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(pins.stream().map(pin ->
-                new PinResponse(
-                    pin.getId(),
-                    pin.getUserId(),
-                    pin.getDescription(),
-                    pin.getMediaId(),
-                    new ArrayList<>(),
-                    pin.getCreatedAt()
-                )).toList()
-            );
-    }
-
     @Operation(summary = "Upload a pin")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Pin uploaded successfully",

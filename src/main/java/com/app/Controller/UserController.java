@@ -8,12 +8,11 @@ import com.app.Jwt.JwtProvider;
 import com.app.Model.Board;
 import com.app.DTO.request.TokenRequest;
 import com.app.Model.Notification;
+import com.app.Model.Pin;
 import com.app.Model.User;
-import com.app.Service.BoardService;
-import com.app.Service.FollowerService;
-import com.app.Service.NotificationService;
-import com.app.Service.UserService;
+import com.app.Service.*;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,6 +30,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +41,7 @@ public class UserController {
 
     private final UserService userService;
     private final BoardService boardService;
+    private final PinService pinService;
     private final FollowerService followerService;
     private final NotificationService notificationService;
     @Qualifier(value = "jwtAccessToken") private final JwtProvider jwtAccessToken;
@@ -49,9 +50,10 @@ public class UserController {
 
 
     @Autowired
-    public UserController(UserService userService, BoardService boardService, FollowerService followerService, NotificationService notificationService, JwtProvider jwtAccessToken, JwtProvider jwtRefreshToken, RedisTemplate<String , Object> redisTemplate) {
+    public UserController(UserService userService, BoardService boardService, PinService pinService, FollowerService followerService, NotificationService notificationService, JwtProvider jwtAccessToken, JwtProvider jwtRefreshToken, RedisTemplate<String , Object> redisTemplate) {
         this.userService = userService;
         this.boardService = boardService;
+        this.pinService = pinService;
         this.followerService = followerService;
         this.notificationService = notificationService;
         this.jwtAccessToken = jwtAccessToken;
@@ -239,6 +241,31 @@ public class UserController {
                                         .toList()
                         ))
                         .toList()
+                );
+    }
+
+
+    @GetMapping("/{userId}/pins")
+    public ResponseEntity<List<PinResponse>> findPinByUserId(
+            @Parameter(description = "id of the user whose pin are to be retrieved", required = true)
+            @PathVariable Long userId,
+            @Parameter(description = "Maximum number of pins to be retrieved")
+            @RequestParam(defaultValue = "10") int limit,
+            @Parameter(description = "Offset for pagination, indicating the starting point")
+            @RequestParam(defaultValue = "0") int offset
+    ) {
+        List<Pin> pins = pinService.findPinByUserId(userId, limit, offset);
+        return ResponseEntity.status(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(pins.stream().map(pin ->
+                        new PinResponse(
+                                pin.getId(),
+                                pin.getUserId(),
+                                pin.getDescription(),
+                                pin.getMediaId(),
+                                new ArrayList<>(),
+                                pin.getCreatedAt()
+                        )).toList()
                 );
     }
 
