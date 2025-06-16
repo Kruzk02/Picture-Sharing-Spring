@@ -1,12 +1,12 @@
 # Media Sharing Spring
 
-Media Sharing Spring is a project aimed at sharing meida(picture and video) using Spring Boot in Java.
+Media Sharing Spring is a Java-based project built with Spring Boot that enables sharing of media content (pictures and videos) via a REST API.
 
 ## Installation
 
-1. Clone the repository: ` https://github.com/Kruzk02/Picture-Sharing-Spring.git `.
-2. Navigate to the project directory: cd ` Picture-Sharing-Spring `.
-3. Start docker compose using cmd: `docker compose up -d`
+1. Clone the repository: ` https://github.com/Kruzk02/Media-Sharing-Spring.git `.
+2. Navigate to the project directory: `cd Media-Sharing-Spring `.
+3. Start the services using Docker Compose: `docker compose up -d`
 4. Access the API at <http://localhost:8080>.
    
 ## Usage
@@ -36,8 +36,9 @@ Once the application is running, you can use tools like Postman or curl to inter
 - Redis configuration: Configure redis connection properties in `KafkaConfig.java`.
 - Kafka configuration: Configure kafka connection properties in `RedisConnectionConfig.java`.
 - Security configuration: Customize security settings in `SecurityConfig.java`.
+
 # Environment Variables 
-Copy the `.env.example` to `.env` and fill in the required values:
+Copy the `.example.env` to `.env` and fill in the required values:
 ```bash
-cp .env.example .env
+cp .example.env .env
 ```
