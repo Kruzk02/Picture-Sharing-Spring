@@ -83,20 +83,24 @@ public class UserController {
                 .isRemember(isRemember)
                 .build()
         );
-        String refreshToken = jwtRefreshToken.generateToken(TokenRequest.builder()
-                .claims(new HashMap<>())
-                .username(user.getUsername())
-                .isRemember(isRemember)
-                .build()
-        );
 
-        Cookie cookie = new Cookie("refresh_token", refreshToken);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("http://localhost:8080/api/users/refresh");
-        cookie.setMaxAge(30 * 24 * 60 * 60);
+        if (isRemember) {
+            String refreshToken = jwtRefreshToken.generateToken(TokenRequest.builder()
+                    .claims(new HashMap<>())
+                    .username(user.getUsername())
+                    .isRemember(true)
+                    .build()
+            );
 
-        response.addCookie(cookie);
+            Cookie cookie = new Cookie("refresh_token", refreshToken);
+            cookie.setHttpOnly(true);
+            cookie.setSecure(false);
+            cookie.setPath("http://localhost:8080/api/users/refresh");
+            cookie.setMaxAge(30 * 24 * 60 * 60);
+
+            response.addCookie(cookie);
+
+        }
 
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
