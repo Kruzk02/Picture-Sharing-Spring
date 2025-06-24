@@ -1,9 +1,11 @@
 package com.app.aop;
 
+import com.app.annotations.NoLogging;
 import lombok.extern.log4j.Log4j2;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -26,8 +28,13 @@ public class ServiceLoggingAspect {
 
     @Around("serviceLayer()")
     public Object logOperations(ProceedingJoinPoint joinPoint) throws Throwable {
-        String method = joinPoint.getSignature().getName();
+        var signature = (MethodSignature) joinPoint.getSignature();
+        var method = signature.getMethod();
         Object[] args = joinPoint.getArgs();
+
+        if (method.isAnnotationPresent(NoLogging.class)) {
+            return joinPoint.proceed();
+        }
 
         long start = System.currentTimeMillis();
         Object result = joinPoint.proceed();
