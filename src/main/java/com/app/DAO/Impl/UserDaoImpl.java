@@ -2,6 +2,7 @@ package com.app.DAO.Impl;
 
 import com.app.DAO.UserDao;
 import com.app.Model.*;
+import com.app.annotations.NoLogging;
 import com.app.exception.sub.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -34,6 +35,7 @@ public class UserDaoImpl implements UserDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @NoLogging
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.SERIALIZABLE)
     @Override
     public User register(User user) {
@@ -79,6 +81,7 @@ public class UserDaoImpl implements UserDao {
         });
     }
 
+    @NoLogging
     @Transactional(readOnly = true)
     @Override
     public User login(String username) {
