@@ -9,6 +9,7 @@ import com.app.DTO.request.UpdateUserRequest;
 import com.app.Model.*;
 import com.app.Service.UserService;
 import com.app.Service.VerificationTokenService;
+import com.app.annotations.NoLogging;
 import com.app.exception.sub.FileNotFoundException;
 import com.app.exception.sub.UserAlreadyExistsException;
 import com.app.exception.sub.UserNotFoundException;
@@ -55,6 +56,7 @@ public class UserServiceImpl implements UserService {
      * @param request The RegisterRequestDTO object containing user registration information.
      * @return The registered User entity.
      */
+    @NoLogging
     @Override
     public User register(RegisterUserRequest request) {
 
@@ -87,6 +89,7 @@ public class UserServiceImpl implements UserService {
      * @param request The LoginUserRequest object containing user login credentials.
      * @return The authentication User entity.
      */
+    @NoLogging
     @Override
     public User login(LoginUserRequest request) {
         try {
