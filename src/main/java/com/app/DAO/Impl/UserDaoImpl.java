@@ -20,12 +20,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
 
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
 @Repository
-@Transactional
 public class UserDaoImpl implements UserDao {
 
     private final JdbcTemplate jdbcTemplate;
@@ -36,7 +31,6 @@ public class UserDaoImpl implements UserDao {
     }
 
     @NoLogging
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.SERIALIZABLE)
     @Override
     public User register(User user) {
         String userSql = "INSERT INTO users (username, email, password, media_id, gender,enable) VALUES (?, ?, ?, ?, ?, ?)";
@@ -64,7 +58,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     private void assignRoleToUser(Long userId, int roleId) {
         String userRoleSql = "INSERT INTO users_roles (user_id, role_id) VALUES (?, ?)";
         jdbcTemplate.batchUpdate(userRoleSql, new BatchPreparedStatementSetter() {
@@ -82,7 +75,6 @@ public class UserDaoImpl implements UserDao {
     }
 
     @NoLogging
-    @Transactional(readOnly = true)
     @Override
     public User login(String username) {
         try {
@@ -98,7 +90,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Transactional(readOnly = true)
     @Override
     public User findUserById(Long id) {
         try {
@@ -109,7 +100,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Transactional(readOnly = true)
     @Override
     public User findUserByUsername(String username) {
         try {
@@ -120,7 +110,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Transactional(readOnly = true)
     @Override
     public User findUserByEmail(String email) {
         try {
@@ -131,7 +120,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Transactional(readOnly = true)
     @Override
     public User findFullUserByUsername(String username) {
         try {
@@ -142,7 +130,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Transactional(readOnly = true)
     @Override
     public User findPasswordNRoleByUsername(String username) {
         try {
@@ -184,7 +171,6 @@ public class UserDaoImpl implements UserDao {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public User update(User user) {
         StringBuilder sqlBuilder = new StringBuilder("UPDATE users SET ");
@@ -244,7 +230,6 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Boolean checkAccountVerifyById(Long userId) {
         try {
             String sql = "SELECT enable FROM users WHERE id = ?";
