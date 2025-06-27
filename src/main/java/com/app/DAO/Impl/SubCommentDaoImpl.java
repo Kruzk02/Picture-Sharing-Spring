@@ -29,7 +29,6 @@ public class SubCommentDaoImpl implements SubCommentDao {
     private final JdbcTemplate template;
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     public SubComment save(SubComment subComment) {
         try {
             String sql = "INSERT INTO sub_comments (content, user_id, comment_id, media_id) VALUES(?,?,?,?)";
@@ -53,7 +52,6 @@ public class SubCommentDaoImpl implements SubCommentDao {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public SubComment update(Long id, SubComment subComment) {
         StringBuilder sb = new StringBuilder("UPDATE sub_comments SET ");
@@ -86,7 +84,6 @@ public class SubCommentDaoImpl implements SubCommentDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<SubComment> findAllByCommentId(Long commentId, SortType sortType, int limit, int offset) {
         String sql = "SELECT sc.id AS sc_id, sc.content AS sc_content, sc.create_at as sc_create_at, " +
                 "sc.media_id AS sc_media_id, " +
@@ -102,7 +99,6 @@ public class SubCommentDaoImpl implements SubCommentDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public SubComment findById(Long id) {
         try {
             String sql = "SELECT sc.id as sc_id, sc.content AS sc_content, sc.create_at AS sc_create_at, " +
@@ -123,7 +119,6 @@ public class SubCommentDaoImpl implements SubCommentDao {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public int deleteById(Long id) {
         try {
             String sql = "DELETE FROM sub_comments WHERE id = ?";
