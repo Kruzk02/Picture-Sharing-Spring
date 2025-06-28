@@ -47,7 +47,7 @@ public class PrivilegeDaoImpl implements PrivilegeDao {
                 privilege.setName(rs.getString("name"));
                 return privilege;
             }, name);
-        }catch (EmptyResultDataAccessException e) {
+        } catch (EmptyResultDataAccessException e) {
             return null;
         }
     }
