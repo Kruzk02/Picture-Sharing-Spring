@@ -32,7 +32,6 @@ public class RoleDaoImpl implements RoleDao {
     @Override
     public Role create(Role role) {
         String sql = "INSERT INTO roles (name) VALUES (?)";
-        System.out.println("MySQL: "+sql);
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         int rowsAffected = jdbcTemplate.update(connection -> {
