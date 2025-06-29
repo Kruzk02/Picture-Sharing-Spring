@@ -52,7 +52,7 @@ public class NotificationDaoImpl implements NotificationDao {
                     "WHERE user_id = ? AND is_read = false ORDER BY created_at DESC LIMIT ? OFFSET ?";
         } else {
             sql = "SELECT id, message, is_read, created_at FROM notifications " +
-                    "WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
+                    "WHERE user_id = ? AND is_read = true ORDER BY created_at DESC LIMIT ? OFFSET ?";
         }
 
         return template.query(sql, (rs, rowNum) -> Notification.builder()
