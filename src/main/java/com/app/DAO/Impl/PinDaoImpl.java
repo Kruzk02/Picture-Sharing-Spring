@@ -38,7 +38,6 @@ public class PinDaoImpl implements PinDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Transactional(readOnly = true)
     @Override
     public List<Pin> getAllPins(SortType sortType, int limit, int offset) {
         String orderBy = (sortType == SortType.NEWEST) ? "DESC" : "ASC";
@@ -59,7 +58,6 @@ public class PinDaoImpl implements PinDao {
         return jdbcTemplate.query(sql, new PinRowMapper(false, true), tag, limit, offset);
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public Pin save(Pin pin) {
         try {
@@ -143,7 +141,6 @@ public class PinDaoImpl implements PinDao {
         return rowAffected > 0 ? pin : null;
     }
 
-    @Transactional(readOnly = true)
     @Override
     public Pin findById(Long id, boolean fetchDetails) {
         try {
@@ -164,24 +161,22 @@ public class PinDaoImpl implements PinDao {
         }
     }
 
-    @Transactional(readOnly = true)
     @Override
     public List<Pin> findPinByUserId(Long userId, int limit, int offset) {
         try {
-            String sql = "SELECT id, user_id, media_id, created_at FROM pins WHERE user_id = ? ORDER BY created_at DESC limit ? offset ?\n";
+            String sql = "SELECT id, user_id, media_id, created_at FROM pins WHERE user_id = ? ORDER BY created_at DESC limit ? offset ?";
             return jdbcTemplate.query(sql, new PinRowMapper(false, true), userId, limit, offset);
         } catch (DataAccessException e) {
             throw new UserNotFoundException("User not found with a id: " + userId);
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public int deleteById(Long id) {
         try{
             String sql = "DELETE FROM pins WHERE id = ?";
             return jdbcTemplate.update(sql,id);
-        }catch (DataAccessException e){
+        } catch (DataAccessException e){
             throw new PinNotFoundException("Pin not found with a id: " + id);
         }
     }
