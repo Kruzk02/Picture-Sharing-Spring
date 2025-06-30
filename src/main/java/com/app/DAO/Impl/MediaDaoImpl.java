@@ -25,7 +25,6 @@ public class MediaDaoImpl implements MediaDao {
 
     private final JdbcTemplate template;
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public Media save(Media media) {
         try {
@@ -50,7 +49,6 @@ public class MediaDaoImpl implements MediaDao {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public Media update(Long id, Media media) {
         String sql = "UPDATE media SET url = ?, media_type = ? WHERE id = ?";
@@ -58,7 +56,6 @@ public class MediaDaoImpl implements MediaDao {
         return rowAffected > 0 ? media : null;
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public Media findById(Long id) {
         try {
@@ -96,7 +93,6 @@ public class MediaDaoImpl implements MediaDao {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public int deleteById(Long id) {
         try {
