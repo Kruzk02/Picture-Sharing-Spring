@@ -13,9 +13,6 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -32,7 +29,6 @@ public class BoardDaoImpl implements BoardDao {
 
     private final JdbcTemplate jdbcTemplate;
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public Board save(Board board) {
         String sql = "INSERT INTO boards (user_id, board_name) VALUES (?, ?)";
@@ -72,7 +68,6 @@ public class BoardDaoImpl implements BoardDao {
     }
 
     @Override
-    @Transactional
     public Board addPinToBoard(Pin pin, Board board) {
         String sql = "INSERT INTO board_pin (board_id, pin_id) VALUES(?,?)";
         int rowAffected = jdbcTemplate.update(sql, board.getId(), pin.getId());
@@ -85,8 +80,7 @@ public class BoardDaoImpl implements BoardDao {
     }
 
     @Override
-    @Transactional
-    public Board deletePinFromBoard(Pin pin, Board board) {
+     public Board deletePinFromBoard(Pin pin, Board board) {
         String sql = "DELETE FROM board_pin WHERE board_id = ? AND pin_id = ?";
         int rowAffected = jdbcTemplate.update(sql, board.getId(), pin.getId());
         if (rowAffected > 0) {
@@ -96,7 +90,6 @@ public class BoardDaoImpl implements BoardDao {
         return null;
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.SERIALIZABLE)
     @Override
     public Board update(Board board, long id) {
         int rowAffected = jdbcTemplate.update("UPDATE boards SET board_name = ? WHERE id = ? ", board.getName(), id);
@@ -147,8 +140,8 @@ public class BoardDaoImpl implements BoardDao {
         try{
             String sql = "DELETE FROM boards WHERE id = ?";
             return jdbcTemplate.update(sql,id);
-        }catch (DataAccessException e){
-            throw new RuntimeException(e.getMessage());
+        }catch (EmptyResultDataAccessException e){
+            throw new BoardNotFoundException("Board not found with a id: " + id);
         }
     }
 }

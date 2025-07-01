@@ -34,7 +34,6 @@ public class CommentDaoImpl implements CommentDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.REPEATABLE_READ)
     @Override
     public Comment save(Comment comment) {
         try{
@@ -81,7 +80,6 @@ public class CommentDaoImpl implements CommentDao {
         });
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public Comment update(Long id, Comment comment) {
         StringBuilder sb = new StringBuilder("UPDATE comments SET ");
@@ -120,7 +118,6 @@ public class CommentDaoImpl implements CommentDao {
         return rowAffected > 0 ? comment : null;
     }
 
-    @Transactional(readOnly = true)
     @Override
     public Comment findById(Long id, boolean fetchDetails) {
         try {
@@ -141,7 +138,6 @@ public class CommentDaoImpl implements CommentDao {
         }
     }
 
-    @Transactional(readOnly = true)
     @Override
     public List<Comment> findByPinId(Long pinId, SortType sortType, int limit, int offset) {
         try {
@@ -163,7 +159,6 @@ public class CommentDaoImpl implements CommentDao {
         return jdbcTemplate.query(sql, new CommentRowMapper(false, false, true), tag, limit, offset);
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @Override
     public int deleteById(Long id) {
         try{
