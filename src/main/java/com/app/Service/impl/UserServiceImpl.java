@@ -126,7 +126,7 @@ public class UserServiceImpl implements UserService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        User user = this.findFullUserByUsername(username);
+        User user = userDao.findFullUserByUsername(username);
 
         if (user == null) {
             throw new UserNotFoundException("User not found with a username: " + username);
