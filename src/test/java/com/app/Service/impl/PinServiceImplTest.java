@@ -100,18 +100,34 @@ class PinServiceImplTest {
 
         PinRequest request = new PinRequest("Description",mockFile, Set.of("tag1", "tag2"));
         Mockito.when(hashtagDao.findByTag(Set.of("tag1", "tag2"))).thenReturn(new HashMap<>());
-        Mockito.when(hashtagDao.save(Mockito.any(Hashtag.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Mockito.when(hashtagDao.save(Mockito.argThat(ht -> ht.getTag() != null))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Mockito.when(mediaDao.save(Mockito.any())).thenReturn(media);
+        Mockito.when(mediaDao.save(Mockito.argThat(m ->
+                m.getMediaType() != null &&
+                m.getUrl() != null)
+        )).thenReturn(media);
 
-        Mockito.when(pinDao.save(Mockito.any(Pin.class))).thenReturn(pin);
+        Mockito.when(pinDao.save(Mockito.argThat(p ->
+                !p.getHashtags().isEmpty() &&
+                p.getDescription() != null &&
+                p.getUserId() != 0 &&
+                p.getMediaId() != 0
+        ))).thenReturn(pin);
 
         Pin result = pinService.save(request);
 
         assertNotNull(result);
         assertEquals(pin.getId(), result.getId());
-        Mockito.verify(pinDao).save(Mockito.any(Pin.class));
-        Mockito.verify(mediaDao).save(Mockito.any(Media.class));
+        Mockito.verify(pinDao).save(Mockito.argThat(p ->
+                !p.getHashtags().isEmpty() &&
+                p.getDescription() != null &&
+                p.getUserId() != 0 &&
+                p.getMediaId() != 0
+        ));
+        Mockito.verify(mediaDao).save(Mockito.argThat(m ->
+                m.getMediaType() != null &&
+                m.getUrl() != null)
+        );
     }
 
     @Test
@@ -136,7 +152,7 @@ class PinServiceImplTest {
         Mockito.when(mediaDao.findById(pin.getMediaId())).thenReturn(existingMedia);
 
         Mockito.when(hashtagDao.findByTag(Set.of("tag1"))).thenReturn(Map.of());
-        Mockito.when(hashtagDao.save(Mockito.any(Hashtag.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Mockito.when(hashtagDao.save(Mockito.argThat(ht -> ht.getTag() != null))).thenAnswer(invocation -> invocation.getArgument(0));
 
         try (
                 MockedStatic<FileManager> fileManagerMock = Mockito.mockStatic(FileManager.class);
@@ -160,17 +176,35 @@ class PinServiceImplTest {
                     .mediaType(MediaType.IMAGE)
                     .build();
 
-            Mockito.when(mediaDao.update(Mockito.eq(1L), Mockito.any(Media.class))).thenReturn(updatedMedia);
-            Mockito.when(pinDao.update(Mockito.eq(1L), Mockito.any(Pin.class))).thenAnswer(invocation -> invocation.getArgument(1));
+            Mockito.when(mediaDao.update(Mockito.eq(1L), Mockito.argThat(m ->
+                    m.getMediaType() != null &&
+                    m.getUrl() != null))
+            ).thenReturn(updatedMedia);
+
+            Mockito.when(pinDao.update(Mockito.eq(1L), Mockito.argThat(p ->
+                    !p.getHashtags().isEmpty() &&
+                    p.getDescription() != null &&
+                    p.getUserId() != 0 &&
+                    p.getMediaId() != 0
+            ))).thenAnswer(invocation -> invocation.getArgument(1));
 
             Pin updatedPin = pinService.update(1L, pinRequest);
 
             assertEquals("New description", updatedPin.getDescription());
             assertEquals(user.getId(), updatedPin.getUserId());
 
-            Mockito.verify(mediaDao).update(Mockito.eq(1L), Mockito.any(Media.class));
-            Mockito.verify(pinDao).update(Mockito.eq(1L), Mockito.any(Pin.class));
-            Mockito.verify(hashtagDao).save(Mockito.any(Hashtag.class));
+            Mockito.verify(mediaDao).update(Mockito.eq(1L), Mockito.argThat(m ->
+                    m.getMediaType() != null &&
+                    m.getUrl() != null)
+            );
+            Mockito.verify(pinDao).update(Mockito.eq(1L), Mockito.argThat(p ->
+                    p.getId() != null &&
+                    !p.getHashtags().isEmpty() &&
+                    p.getDescription() != null &&
+                    p.getUserId() != 0 &&
+                    p.getMediaId() != 0
+            ));
+            Mockito.verify(hashtagDao).save(Mockito.argThat(ht -> ht.getTag() != null));
         }
     }
 
