@@ -214,7 +214,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}/followers")
-    public ResponseEntity<Void> removeFollower(@PathVariable Long id) {
+    public ResponseEntity<Void> unFollow(@PathVariable Long id) {
         followerService.unfollowUser(id);
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)

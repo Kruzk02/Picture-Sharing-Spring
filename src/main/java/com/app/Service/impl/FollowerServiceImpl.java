@@ -49,11 +49,11 @@ public class FollowerServiceImpl implements FollowerService {
             throw new IllegalArgumentException("Users cannot follow themselves.");
         }
 
-        if (followerDao.isFollowing(userToFollow.getId(), authUserId)) {
+        if (followerDao.isFollowing(authUserId, userToFollow.getId())) {
             throw new RuntimeException("User is already following.");
         }
 
-        return followerDao.followUser(userToFollow.getId(), authUserId);
+        return followerDao.followUser(authUserId, userToFollow.getId());
     }
 
     @Override
@@ -65,10 +65,10 @@ public class FollowerServiceImpl implements FollowerService {
 
         long authUserId = getAuthenticationUser().getId();
 
-        if (!followerDao.isFollowing(userToUnfollow.getId(), authUserId)) {
+        if (!followerDao.isFollowing(authUserId, userToUnfollow.getId())) {
             throw new RuntimeException("User is not following.");
         }
 
-        followerDao.unfollowUser(userToUnfollow.getId(), authUserId);
+        followerDao.unfollowUser(authUserId, userToUnfollow.getId());
     }
 }

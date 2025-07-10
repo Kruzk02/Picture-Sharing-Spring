@@ -117,8 +117,8 @@ class FollowerDaoImplTest {
     }
 
     @Test
-    void addFollowerToUser_shouldReturnFollower() {
-        Mockito.when(jdbcTemplate.update("INSERT INTO followers (follower_id, following_id) VALUES (?, ?)", 1L, 2L)).thenReturn(1);
+    void followUser_shouldReturnFollower() {
+        Mockito.when(jdbcTemplate.update("INSERT INTO followers (following_id, follower_id) VALUES (?, ?)", 1L, 2L)).thenReturn(1);
 
         Follower result = followerDao.followUser(1L, 2L);
 
@@ -129,7 +129,7 @@ class FollowerDaoImplTest {
 
     @Test
     void followUser_shouldFail() {
-        Mockito.when(jdbcTemplate.update("INSERT INTO followers (follower_id, following_id) VALUES (?, ?)", 1L, 2L)).thenReturn(0);
+        Mockito.when(jdbcTemplate.update("INSERT INTO followers (following_id, follower_id) VALUES (?, ?)", 1L, 2L)).thenReturn(0);
 
         Follower result = followerDao.followUser(1L, 2L);
 

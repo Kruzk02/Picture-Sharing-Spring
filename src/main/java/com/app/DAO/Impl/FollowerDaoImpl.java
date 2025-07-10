@@ -45,10 +45,10 @@ public class FollowerDaoImpl implements FollowerDao {
     }
 
     @Override
-    public boolean isFollowing(long followerId, long userId) {
+    public boolean isFollowing(long authUserId, long targetId) {
         try {
             String sql = "SELECT COUNT(*) FROM followers WHERE follower_id = ? AND following_id = ?";
-            Integer count = template.queryForObject(sql, Integer.class, followerId, userId);
+            Integer count = template.queryForObject(sql, Integer.class, authUserId, targetId);
             return count > 0;
         } catch (DataAccessException e) {
             throw new RuntimeException("Error checking follow status: " + e.getMessage(), e);
@@ -56,14 +56,14 @@ public class FollowerDaoImpl implements FollowerDao {
     }
 
     @Override
-    public Follower followUser(long followerId, long userId) {
+    public Follower followUser(long authUserId, long targetId) {
         try {
             String sql = "INSERT INTO followers (follower_id, following_id) VALUES (?, ?)";
-            int rowsAffected = template.update(sql, followerId, userId);
+            int rowsAffected = template.update(sql, authUserId, targetId);
             if (rowsAffected > 0) {
                 return Follower.builder()
-                        .followerId(followerId)
-                        .followingId(userId)
+                        .followerId(authUserId)
+                        .followingId(targetId)
                         .build();
             }
             return null;
@@ -73,10 +73,10 @@ public class FollowerDaoImpl implements FollowerDao {
     }
 
     @Override
-    public int unfollowUser(long followerId, long userId) {
+    public int unfollowUser(long authUserId, long targetId) {
         try {
             String sql = "DELETE FROM followers WHERE follower_id = ? AND following_id = ?";
-            return template.update(sql, followerId, userId);
+            return template.update(sql, authUserId, targetId);
         } catch (DataAccessException e) {
             throw new RuntimeException("Error removing follower: " + e.getMessage(), e);
         }

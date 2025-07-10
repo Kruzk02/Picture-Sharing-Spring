@@ -89,9 +89,9 @@ class FollowerServiceImplTest {
         mockAuthentication(user1);
 
         Mockito.when(userDao.findUserById(2L)).thenReturn(user2);
-        Mockito.when(followerDao.isFollowing(2L, 1L)).thenReturn(false);
+        Mockito.when(followerDao.isFollowing(1L, 2L)).thenReturn(false);
 
-        Mockito.when(followerDao.followUser(2L, 1L)).thenReturn(follower);
+        Mockito.when(followerDao.followUser(1L, 2L)).thenReturn(follower);
 
         Follower result = followerService.followUser(2L);
 
@@ -112,10 +112,10 @@ class FollowerServiceImplTest {
         mockAuthentication(user1);
 
         Mockito.when(userDao.findUserById(2L)).thenReturn(user2);
-        Mockito.when(followerDao.isFollowing(2L, 1L)).thenReturn(true);
+        Mockito.when(followerDao.isFollowing( 1L, 2L)).thenReturn(true);
 
         assertDoesNotThrow(() -> followerService.unfollowUser(2L));
-        Mockito.verify(followerDao).unfollowUser(2L, 1L);
+        Mockito.verify(followerDao).unfollowUser(1L, 2L);
     }
 
     @Test
