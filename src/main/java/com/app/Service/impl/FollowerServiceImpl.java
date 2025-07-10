@@ -37,38 +37,38 @@ public class FollowerServiceImpl implements FollowerService {
     }
 
     @Override
-    public Follower addFollowerToUser(long followerId) {
-        User follower = userDao.findUserById(followerId);
-        if (follower == null) {
-            throw new UserNotFoundException("User not found with a id: " + followerId);
+    public Follower followUser(long userIdToFollow) {
+        User userToFollow = userDao.findUserById(userIdToFollow);
+        if (userToFollow == null) {
+            throw new UserNotFoundException("User not found with a id: " + userIdToFollow);
         }
 
         long authUserId = getAuthenticationUser().getId();
 
-        if (Objects.equals(authUserId, follower.getId())) {
+        if (Objects.equals(authUserId, userToFollow.getId())) {
             throw new IllegalArgumentException("Users cannot follow themselves.");
         }
 
-        if (followerDao.isUserAlreadyFollowing(follower.getId(), authUserId)) {
+        if (followerDao.isFollowing(userToFollow.getId(), authUserId)) {
             throw new RuntimeException("User is already following.");
         }
 
-        return followerDao.addFollowerToUser(follower.getId(), authUserId);
+        return followerDao.followUser(userToFollow.getId(), authUserId);
     }
 
     @Override
-    public void removeFollowerFromUser(long followerId) {
-        User follower = userDao.findUserById(followerId);
-        if (follower == null) {
+    public void unfollowUser(long followerId) {
+        User userToUnfollow = userDao.findUserById(followerId);
+        if (userToUnfollow == null) {
             throw new UserNotFoundException("User not found with ID: " + followerId);
         }
 
         long authUserId = getAuthenticationUser().getId();
 
-        if (!followerDao.isUserAlreadyFollowing(follower.getId(), authUserId)) {
+        if (!followerDao.isFollowing(userToUnfollow.getId(), authUserId)) {
             throw new RuntimeException("User is not following.");
         }
 
-        followerDao.removeFollowerFromUser(follower.getId(), authUserId);
+        followerDao.unfollowUser(userToUnfollow.getId(), authUserId);
     }
 }

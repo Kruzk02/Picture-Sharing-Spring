@@ -207,15 +207,15 @@ public class UserController {
     }
 
     @PostMapping("/{id}/followers")
-    public ResponseEntity<FollowerResponse> addFollower(@PathVariable Long id) {
+    public ResponseEntity<FollowerResponse> followUser(@PathVariable Long id) {
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new FollowerResponse(followerService.addFollowerToUser(id).getFollowingId()));
+                .body(new FollowerResponse(followerService.followUser(id).getFollowingId()));
     }
 
     @DeleteMapping("/{id}/followers")
     public ResponseEntity<Void> removeFollower(@PathVariable Long id) {
-        followerService.removeFollowerFromUser(id);
+        followerService.unfollowUser(id);
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
                 .build();

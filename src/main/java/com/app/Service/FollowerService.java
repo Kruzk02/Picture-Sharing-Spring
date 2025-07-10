@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface FollowerService {
     List<User> getAllFollowingByUserId(long userId, int limit);
-    Follower addFollowerToUser(long followerId);
-    void removeFollowerFromUser(long followerId);
+    Follower followUser(long followerId);
+    void unfollowUser(long followerId);
 }

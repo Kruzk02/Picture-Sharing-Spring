@@ -77,7 +77,7 @@ class FollowerDaoImplTest {
     }
 
     @Test
-    void isUserAlreadyFollowing_shouldReturnTrue_whenUserAlreadyFollowingOther() {
+    void isUserAlreadyFollowing_shouldReturnTrue_whenFollowingOther() {
         Mockito.when(jdbcTemplate.queryForObject(
                 Mockito.eq("SELECT COUNT(*) FROM followers WHERE follower_id = ? AND following_id = ?"),
                 Mockito.eq(Integer.class),
@@ -85,7 +85,7 @@ class FollowerDaoImplTest {
                 Mockito.eq(2L)
         )).thenReturn(1);
 
-        var result = followerDao.isUserAlreadyFollowing(1L, 2L);
+        var result = followerDao.isFollowing(1L, 2L);
         assertTrue(result);
 
         Mockito.verify(jdbcTemplate).queryForObject(
@@ -105,7 +105,7 @@ class FollowerDaoImplTest {
                 Mockito.eq(2L)
         )).thenReturn(0);
 
-        var result = followerDao.isUserAlreadyFollowing(1L, 2L);
+        var result = followerDao.isFollowing(1L, 2L);
         assertFalse(result);
 
         Mockito.verify(jdbcTemplate).queryForObject(
@@ -120,7 +120,7 @@ class FollowerDaoImplTest {
     void addFollowerToUser_shouldReturnFollower() {
         Mockito.when(jdbcTemplate.update("INSERT INTO followers (follower_id, following_id) VALUES (?, ?)", 1L, 2L)).thenReturn(1);
 
-        Follower result = followerDao.addFollowerToUser(1L, 2L);
+        Follower result = followerDao.followUser(1L, 2L);
 
         assertNotNull(result);
         assertEquals(1L, result.getFollowerId());
@@ -128,29 +128,29 @@ class FollowerDaoImplTest {
     }
 
     @Test
-    void addFollowerToUser_shouldFail() {
+    void followUser_shouldFail() {
         Mockito.when(jdbcTemplate.update("INSERT INTO followers (follower_id, following_id) VALUES (?, ?)", 1L, 2L)).thenReturn(0);
 
-        Follower result = followerDao.addFollowerToUser(1L, 2L);
+        Follower result = followerDao.followUser(1L, 2L);
 
         assertNull(result);
     }
 
     @Test
-    void testRemoveFollowerFromUser_success() {
+    void testUnfollowUser_success() {
         Mockito.when(jdbcTemplate.update("DELETE FROM followers WHERE follower_id = ? AND following_id = ?", 1L, 2L)).thenReturn(1);
 
-        int result = followerDao.removeFollowerFromUser(1L, 2L);
+        int result = followerDao.unfollowUser(1L, 2L);
 
         assertEquals(1, result);
     }
 
     @Test
-    void testRemoveFollowerFromUser_exception() {
+    void testUnfollowUser_exception() {
         Mockito.when(jdbcTemplate.update("DELETE FROM followers WHERE follower_id = ? AND following_id = ?", 1L, 2L))
                 .thenThrow(new DataAccessException("DB error") {});
 
         assertThrows(RuntimeException.class, () ->
-                followerDao.removeFollowerFromUser(1L, 2L));
+                followerDao.unfollowUser(1L, 2L));
     }
 }
