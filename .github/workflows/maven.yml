@@ -38,7 +38,6 @@ jobs:
     - name: Build with Maven
       run: mvn -B package --file pom.xml
 
-
     - name: Create .env file
       run: |
         cat <<EOF > .env
@@ -51,11 +50,16 @@ jobs:
         CLUSTER_ID=${{ secrets.CLUSTER_ID }}
         EOF
 
+    - name: Check docker and docker compose versions
+      run: |
+        docker --version
+        docker compose version
+
     - name: Build Docker image
       run: docker build -t app:latest .
 
     - name: Run docker-compose
-      run: docker-compose up -d
+      run: docker compose up -d
 
     - name: Show running containers
       run: docker ps -a
