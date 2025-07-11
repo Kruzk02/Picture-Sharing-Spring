@@ -1,3 +1,3 @@
 package com.app.DTO.request;
 
-public record BoardUpdateRequest(String name) { }
+public record BoardUpdateRequest(String name) {}

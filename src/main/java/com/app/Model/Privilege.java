@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Privilege {
-    private Long id;
-    private String name;
+  private Long id;
+  private String name;
 
-    public Privilege(String name) {
-        this.name = name;
-    }
+  public Privilege(String name) {
+    this.name = name;
+  }
 }

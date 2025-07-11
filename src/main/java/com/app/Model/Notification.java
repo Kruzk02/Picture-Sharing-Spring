@@ -1,11 +1,10 @@
 package com.app.Model;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,9 +12,9 @@ import java.time.LocalDateTime;
 @Builder
 public class Notification {
 
-    private Long id;
-    private Long userId;
-    private String message;
-    private boolean isRead;
-    private LocalDateTime createdAt;
+  private Long id;
+  private Long userId;
+  private String message;
+  private boolean isRead;
+  private LocalDateTime createdAt;
 }

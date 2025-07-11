@@ -8,16 +8,16 @@ import org.apache.kafka.common.serialization.Serializer;
 
 public class VerificationEmailEventSerializer implements Serializer<VerificationEmailEvent> {
 
-    private final ObjectMapper objectMapper;
+  private final ObjectMapper objectMapper;
 
-    public VerificationEmailEventSerializer() {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-    }
+  public VerificationEmailEventSerializer() {
+    objectMapper = new ObjectMapper();
+    objectMapper.registerModule(new JavaTimeModule());
+  }
 
-    @SneakyThrows
-    @Override
-    public byte[] serialize(String s, VerificationEmailEvent event) {
-        return objectMapper.writeValueAsBytes(event);
-    }
+  @SneakyThrows
+  @Override
+  public byte[] serialize(String s, VerificationEmailEvent event) {
+    return objectMapper.writeValueAsBytes(event);
+  }
 }

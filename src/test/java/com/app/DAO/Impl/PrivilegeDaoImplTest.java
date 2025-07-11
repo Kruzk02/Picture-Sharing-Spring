@@ -1,6 +1,9 @@
 package com.app.DAO.Impl;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.app.Model.Privilege;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,86 +18,85 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 @ExtendWith(MockitoExtension.class)
 class PrivilegeDaoImplTest {
 
-    @InjectMocks private PrivilegeDaoImpl privilegeDao;
-    @Mock private JdbcTemplate jdbcTemplate;
+  @InjectMocks private PrivilegeDaoImpl privilegeDao;
+  @Mock private JdbcTemplate jdbcTemplate;
 
-    private Privilege privilege;
+  private Privilege privilege;
 
-    @BeforeEach
-    void setUp() {
-        privilege = Privilege.builder()
-                .id(1L)
-                .name("name")
-                .build();
-    }
+  @BeforeEach
+  void setUp() {
+    privilege = Privilege.builder().id(1L).name("name").build();
+  }
 
-    @Test
-    void create_shouldInsertPrivilege() {
-        GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
-        keyHolder.getKeyList().add(Map.of("GENERATED_KEY", 1L));
+  @Test
+  void create_shouldInsertPrivilege() {
+    GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
+    keyHolder.getKeyList().add(Map.of("GENERATED_KEY", 1L));
 
-        Mockito.when(jdbcTemplate.update(Mockito.any(PreparedStatementCreator.class), Mockito.any(KeyHolder.class)))
-                .thenAnswer(invocation -> {
-                    KeyHolder kh = invocation.getArgument(1);
-                    kh.getKeyList().add(Map.of("GENERATED_KEY", 1L));
-                    return 1;
-                });
+    Mockito.when(
+            jdbcTemplate.update(
+                Mockito.any(PreparedStatementCreator.class), Mockito.any(KeyHolder.class)))
+        .thenAnswer(
+            invocation -> {
+              KeyHolder kh = invocation.getArgument(1);
+              kh.getKeyList().add(Map.of("GENERATED_KEY", 1L));
+              return 1;
+            });
 
-        var result = privilegeDao.create(privilege);
+    var result = privilegeDao.create(privilege);
 
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        assertEquals("name", result.getName());
-    }
+    assertNotNull(result);
+    assertEquals(1L, result.getId());
+    assertEquals("name", result.getName());
+  }
 
-    @Test
-    void create_shouldReturnNull_whenInsertFail() {
-        Mockito.when(jdbcTemplate.update(Mockito.any(PreparedStatementCreator.class), Mockito.any(KeyHolder.class)))
-                .thenReturn(0);
+  @Test
+  void create_shouldReturnNull_whenInsertFail() {
+    Mockito.when(
+            jdbcTemplate.update(
+                Mockito.any(PreparedStatementCreator.class), Mockito.any(KeyHolder.class)))
+        .thenReturn(0);
 
-        var result = privilegeDao.create(privilege);
+    var result = privilegeDao.create(privilege);
 
-        assertNull(result);
+    assertNull(result);
 
-        Mockito.verify(jdbcTemplate).update(Mockito.any(PreparedStatementCreator.class), Mockito.any(KeyHolder.class));
-    }
+    Mockito.verify(jdbcTemplate)
+        .update(Mockito.any(PreparedStatementCreator.class), Mockito.any(KeyHolder.class));
+  }
 
-    @Test
-    void findByName_shouldReturnPrivilege_whenPrivilegeExists() {
-        Mockito.when(jdbcTemplate.queryForObject(
+  @Test
+  void findByName_shouldReturnPrivilege_whenPrivilegeExists() {
+    Mockito.when(
+            jdbcTemplate.queryForObject(
                 Mockito.eq("SELECT * FROM privileges WHERE name = ?"),
                 Mockito.any(RowMapper.class),
-                Mockito.eq("name"))
-        ).thenReturn(privilege);
+                Mockito.eq("name")))
+        .thenReturn(privilege);
 
-        var result = privilegeDao.findByName("name");
+    var result = privilegeDao.findByName("name");
 
-        assertNotNull(result);
-        assertEquals(result.getName(), privilege.getName());
+    assertNotNull(result);
+    assertEquals(result.getName(), privilege.getName());
 
-        Mockito.verify(jdbcTemplate).queryForObject(
-                Mockito.eq("SELECT * FROM privileges WHERE name = ?"),
-                Mockito.any(RowMapper.class),
-                Mockito.eq("name")
-        );
-    }
+    Mockito.verify(jdbcTemplate)
+        .queryForObject(
+            Mockito.eq("SELECT * FROM privileges WHERE name = ?"),
+            Mockito.any(RowMapper.class),
+            Mockito.eq("name"));
+  }
 
-    @Test
-    void findByName_shouldReturnNull_whenPrivilegeDoesNotExists() {
-        Mockito.when(jdbcTemplate.queryForObject(
-                Mockito.anyString(),
-                Mockito.any(RowMapper.class),
-                Mockito.eq("name"))
-        ).thenThrow(new EmptyResultDataAccessException(1));
+  @Test
+  void findByName_shouldReturnNull_whenPrivilegeDoesNotExists() {
+    Mockito.when(
+            jdbcTemplate.queryForObject(
+                Mockito.anyString(), Mockito.any(RowMapper.class), Mockito.eq("name")))
+        .thenThrow(new EmptyResultDataAccessException(1));
 
-        var result = privilegeDao.findByName("name");
-        assertNull(result);
-    }
+    var result = privilegeDao.findByName("name");
+    assertNull(result);
+  }
 }

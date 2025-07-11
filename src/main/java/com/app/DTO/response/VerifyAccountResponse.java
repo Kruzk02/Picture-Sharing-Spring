@@ -1,4 +1,3 @@
 package com.app.DTO.response;
 
-public record VerifyAccountResponse(String message) {
-}
+public record VerifyAccountResponse(String message) {}

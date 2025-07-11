@@ -8,16 +8,16 @@ import org.apache.kafka.common.serialization.Deserializer;
 
 public class VerificationEmailEventDeserializer implements Deserializer<VerificationEmailEvent> {
 
-    private final ObjectMapper objectMapper;
+  private final ObjectMapper objectMapper;
 
-    public VerificationEmailEventDeserializer() {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-    }
+  public VerificationEmailEventDeserializer() {
+    objectMapper = new ObjectMapper();
+    objectMapper.registerModule(new JavaTimeModule());
+  }
 
-    @SneakyThrows
-    @Override
-    public VerificationEmailEvent deserialize(String s, byte[] bytes) {
-        return objectMapper.readValue(bytes, VerificationEmailEvent.class);
-    }
+  @SneakyThrows
+  @Override
+  public VerificationEmailEvent deserialize(String s, byte[] bytes) {
+    return objectMapper.readValue(bytes, VerificationEmailEvent.class);
+  }
 }

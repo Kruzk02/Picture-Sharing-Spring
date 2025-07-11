@@ -12,25 +12,22 @@ import com.app.exception.sub.PinNotFoundException;
 import com.app.exception.sub.UserNotMatchException;
 import com.app.storage.FileManager;
 import com.app.storage.MediaManager;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
-
 /**
- * Pin Service class responsible for handling operations relates to Pins.<p>
- * This class interacts with the PinDaoImpl for data access,
- * and utilizes ModelMapper for mapping between DTOs and entity objects.
+ * Pin Service class responsible for handling operations relates to Pins.
+ *
+ * <p>This class interacts with the PinDaoImpl for data access, and utilizes ModelMapper for mapping
+ * between DTOs and entity objects.
  */
 @Slf4j
 @Service
@@ -38,153 +35,161 @@ import java.util.function.Supplier;
 @AllArgsConstructor
 public class PinServiceImpl implements PinService {
 
-    private final PinDao pinDao;
-    private final UserDao userDao;
-    private final MediaDao mediaDao;
-    private final HashtagDao hashtagDao;
+  private final PinDao pinDao;
+  private final UserDao userDao;
+  private final MediaDao mediaDao;
+  private final HashtagDao hashtagDao;
 
-    private User getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return userDao.findUserByUsername(authentication.getName());
-    }
-    /**
-     * Retrieves all pins.
-     *
-     * @return A List of all pins.
-     */
-    public List<Pin> getAllPins(SortType sortType, int limit, int offset) {
-        return pinDao.getAllPins(sortType,limit,offset);
-    }
+  private User getAuthenticatedUser() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    return userDao.findUserByUsername(authentication.getName());
+  }
 
-    @Override
-    public List<Pin> getAllPinsByHashtag(String tag, int limit, int offset) {
-        return pinDao.getAllPinsByHashtag(tag, limit, offset);
-    }
+  /**
+   * Retrieves all pins.
+   *
+   * @return A List of all pins.
+   */
+  public List<Pin> getAllPins(SortType sortType, int limit, int offset) {
+    return pinDao.getAllPins(sortType, limit, offset);
+  }
 
-    @Transactional
-    @Override
-    public Pin save(PinRequest pinRequest) {
-        if (pinRequest.file().isEmpty()) {
-            throw new PinIsEmptyException("A pin must have file");
-        }
+  @Override
+  public List<Pin> getAllPinsByHashtag(String tag, int limit, int offset) {
+    return pinDao.getAllPinsByHashtag(tag, limit, offset);
+  }
 
-        Set<String> tagsToFind = pinRequest.hashtags();
-        Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
-
-        List<Hashtag> hashtags = new ArrayList<>();
-        for (String tag : tagsToFind) {
-            Hashtag hashtag = tags.get(tag);
-            if (hashtag == null) {
-                hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
-            }
-            hashtags.add(hashtag);
-        }
-
-        String filename = MediaManager.generateUniqueFilename(pinRequest.file().getOriginalFilename());
-        String extension = MediaManager.getFileExtension(pinRequest.file().getOriginalFilename());
-
-        FileManager.save(pinRequest.file(), filename, extension);
-        Media media = mediaDao.save(Media.builder()
-                .url(filename)
-                .mediaType(MediaType.fromExtension(extension))
-                .build());
-
-        Pin pin = Pin.builder()
-                .description(pinRequest.description())
-                .userId(getAuthenticatedUser().getId())
-                .mediaId(media.getId())
-                .hashtags(hashtags)
-                .build();
-        return pinDao.save(pin);
+  @Transactional
+  @Override
+  public Pin save(PinRequest pinRequest) {
+    if (pinRequest.file().isEmpty()) {
+      throw new PinIsEmptyException("A pin must have file");
     }
 
-    @Override
-    public Pin update(Long id, PinRequest pinRequest) {
+    Set<String> tagsToFind = pinRequest.hashtags();
+    Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
 
-        Pin existingPin = pinDao.findById(id, false);
-
-        if (existingPin == null) {
-            throw new PinNotFoundException("Pin not found with a id: " + id);
-        }
-
-        if (getAuthenticatedUser() == null || !Objects.equals(getAuthenticatedUser().getId(), existingPin.getUserId())) {
-            throw new UserNotMatchException("User does not matching with a pin owner");
-        }
-
-        if (pinRequest.file() != null && !pinRequest.file().isEmpty()) {
-            Media existingMedia = mediaDao.findById(existingPin.getMediaId());
-            String extensionOfExistingMedia = MediaManager.getFileExtension(existingMedia.getUrl());
-
-            String filename = MediaManager.generateUniqueFilename(pinRequest.file().getOriginalFilename());
-            String extension = MediaManager.getFileExtension(pinRequest.file().getOriginalFilename());
-
-            CompletableFuture.runAsync(() -> FileManager.delete(existingMedia.getUrl(), extensionOfExistingMedia))
-                    .thenRunAsync(() -> FileManager.save(pinRequest.file(), filename, extension));
-
-            mediaDao.update(existingPin.getMediaId(), Media.builder()
-                    .url(filename)
-                    .mediaType(MediaType.fromExtension(extension))
-                    .build());
-        }
-
-        Set<String> tagsToFind = pinRequest.hashtags();
-        Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
-
-        List<Hashtag> hashtags = new ArrayList<>();
-        for (String tag : tagsToFind) {
-            Hashtag hashtag = tags.get(tag);
-            if (hashtag == null) {
-                hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
-            }
-            hashtags.add(hashtag);
-        }
-
-        existingPin.setDescription(pinRequest.description() != null? pinRequest.description() : existingPin.getDescription());
-        existingPin.setHashtags(hashtags);
-        return pinDao.update(id, existingPin);
+    List<Hashtag> hashtags = new ArrayList<>();
+    for (String tag : tagsToFind) {
+      Hashtag hashtag = tags.get(tag);
+      if (hashtag == null) {
+        hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
+      }
+      hashtags.add(hashtag);
     }
 
-    /**
-     * Retrieves a pin with little or full details, using database or cache
-     * @param id The id of the pin to be found.
-     * @param fetchDetails The details of little or full details of the pin
-     * @return A pin with specified id, either fetch from database or cache. If no pin are found, an exception is thrown
-     */
-    @Override
-    public Pin findById(Long id, boolean fetchDetails) {
-        return pinDao.findById(id, fetchDetails);
+    String filename = MediaManager.generateUniqueFilename(pinRequest.file().getOriginalFilename());
+    String extension = MediaManager.getFileExtension(pinRequest.file().getOriginalFilename());
+
+    FileManager.save(pinRequest.file(), filename, extension);
+    Media media =
+        mediaDao.save(
+            Media.builder().url(filename).mediaType(MediaType.fromExtension(extension)).build());
+
+    Pin pin =
+        Pin.builder()
+            .description(pinRequest.description())
+            .userId(getAuthenticatedUser().getId())
+            .mediaId(media.getId())
+            .hashtags(hashtags)
+            .build();
+    return pinDao.save(pin);
+  }
+
+  @Override
+  public Pin update(Long id, PinRequest pinRequest) {
+
+    Pin existingPin = pinDao.findById(id, false);
+
+    if (existingPin == null) {
+      throw new PinNotFoundException("Pin not found with a id: " + id);
     }
 
-    /**
-     * Retrieves a list of pin associated with specific user, using both database and cache.
-     * @param userId The id of the user whose pin are to be retrieved.
-     * @param limit The maximum number of pin to be return.
-     * @param offset The offset to paginate the pin result.
-     * @return A list of pin associated with specified user ID, either from fetch database or cache. If no pin are found, an empty list is returned
-     */
-    @Override
-    public List<Pin> findPinByUserId(Long userId, int limit, int offset) {
-        return pinDao.findPinByUserId(userId, limit, offset);
+    if (getAuthenticatedUser() == null
+        || !Objects.equals(getAuthenticatedUser().getId(), existingPin.getUserId())) {
+      throw new UserNotMatchException("User does not matching with a pin owner");
     }
 
-    @Override
-    public void delete(Long id) throws IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = userDao.findUserByUsername(authentication.getName());
+    if (pinRequest.file() != null && !pinRequest.file().isEmpty()) {
+      Media existingMedia = mediaDao.findById(existingPin.getMediaId());
+      String extensionOfExistingMedia = MediaManager.getFileExtension(existingMedia.getUrl());
 
-        Pin pin = pinDao.findById(id, false);
-        if (pin == null) {
-            throw new PinNotFoundException("Pin not found with a id: " + id);
-        }
+      String filename =
+          MediaManager.generateUniqueFilename(pinRequest.file().getOriginalFilename());
+      String extension = MediaManager.getFileExtension(pinRequest.file().getOriginalFilename());
 
-        if (!Objects.equals(user.getId(), pin.getUserId())) {
-            throw new UserNotMatchException("Authenticated user does not own the pin");
-        }
+      CompletableFuture.runAsync(
+              () -> FileManager.delete(existingMedia.getUrl(), extensionOfExistingMedia))
+          .thenRunAsync(() -> FileManager.save(pinRequest.file(), filename, extension));
 
-        Media media = mediaDao.findById(pin.getMediaId());
-        FileManager.delete(media.getUrl(), media.getMediaType().toString());
-        mediaDao.deleteById(media.getId());
-
-        pinDao.deleteById(id);
+      mediaDao.update(
+          existingPin.getMediaId(),
+          Media.builder().url(filename).mediaType(MediaType.fromExtension(extension)).build());
     }
+
+    Set<String> tagsToFind = pinRequest.hashtags();
+    Map<String, Hashtag> tags = hashtagDao.findByTag(tagsToFind);
+
+    List<Hashtag> hashtags = new ArrayList<>();
+    for (String tag : tagsToFind) {
+      Hashtag hashtag = tags.get(tag);
+      if (hashtag == null) {
+        hashtag = hashtagDao.save(Hashtag.builder().tag(tag).build());
+      }
+      hashtags.add(hashtag);
+    }
+
+    existingPin.setDescription(
+        pinRequest.description() != null ? pinRequest.description() : existingPin.getDescription());
+    existingPin.setHashtags(hashtags);
+    return pinDao.update(id, existingPin);
+  }
+
+  /**
+   * Retrieves a pin with little or full details, using database or cache
+   *
+   * @param id The id of the pin to be found.
+   * @param fetchDetails The details of little or full details of the pin
+   * @return A pin with specified id, either fetch from database or cache. If no pin are found, an
+   *     exception is thrown
+   */
+  @Override
+  public Pin findById(Long id, boolean fetchDetails) {
+    return pinDao.findById(id, fetchDetails);
+  }
+
+  /**
+   * Retrieves a list of pin associated with specific user, using both database and cache.
+   *
+   * @param userId The id of the user whose pin are to be retrieved.
+   * @param limit The maximum number of pin to be return.
+   * @param offset The offset to paginate the pin result.
+   * @return A list of pin associated with specified user ID, either from fetch database or cache.
+   *     If no pin are found, an empty list is returned
+   */
+  @Override
+  public List<Pin> findPinByUserId(Long userId, int limit, int offset) {
+    return pinDao.findPinByUserId(userId, limit, offset);
+  }
+
+  @Override
+  public void delete(Long id) throws IOException {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    User user = userDao.findUserByUsername(authentication.getName());
+
+    Pin pin = pinDao.findById(id, false);
+    if (pin == null) {
+      throw new PinNotFoundException("Pin not found with a id: " + id);
+    }
+
+    if (!Objects.equals(user.getId(), pin.getUserId())) {
+      throw new UserNotMatchException("Authenticated user does not own the pin");
+    }
+
+    Media media = mediaDao.findById(pin.getMediaId());
+    FileManager.delete(media.getUrl(), media.getMediaType().toString());
+    mediaDao.deleteById(media.getId());
+
+    pinDao.deleteById(id);
+  }
 }
