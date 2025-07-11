@@ -208,9 +208,10 @@ class UserDaoImplTest {
     }
 
     @Test
-    void findFullUserByUsername_shouldThrowException_whenUserDoesNotExists() {
-        when(jdbcTemplate.queryForObject(anyString(), any(UserRowMapper.class), eq(user.getUsername()))).thenThrow(new EmptyResultDataAccessException(1));
-        assertThrows(UserNotFoundException.class, () -> userDao.findFullUserByUsername(user.getUsername()));
+    void findFullUserByUsername_shouldReturnNull_whenUserDoesNotExists() {
+        when(jdbcTemplate.queryForObject(anyString(), any(UserRowMapper.class), eq(user.getUsername()))).thenReturn(null);
+        var result = userDao.findFullUserByUsername(user.getUsername());
+        assertNull(result);
     }
 
     @Test
