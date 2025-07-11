@@ -31,7 +31,35 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
+
     - name: Check code formatting with Spotless
       run: mvn spotless:check
+
     - name: Build with Maven
       run: mvn -B package --file pom.xml
+
+
+    - name: Create .env file
+      run: |
+        cat <<EOF > .env
+        MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+        ZOOKEEPER_CLIENT_PORT=${{ secrets.ZOOKEEPER_CLIENT_PORT }}
+        SPRING_MAIL_USERNAME=${{ secrets.SPRING_MAIL_USERNAME }}
+        SPRING_MAIL_PASSWORD=${{ secrets.SPRING_MAIL_PASSWORD }}
+        SPRING_MAIL_HOST=${{ secrets.SPRING_MAIL_HOST }}
+        SPRING_MAIL_PORT=${{ secrets.SPRING_MAIL_PORT }}
+        CLUSTER_ID=${{ secrets.CLUSTER_ID }}
+        EOF
+
+    - name: Build Docker image
+      run: docker build -t app:latest .
+
+    - name: Run docker-compose
+      run: docker-compose up -d
+
+    - name: Show running containers
+      run: docker ps -a
+
+    - name: Tear down docker-compose
+      if: always()
+      run: docker-compose down
