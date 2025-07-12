@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 public class TokenRequest {
-  private String username;
-  private boolean isRemember;
-  private Map<String, Object> claims;
+    private String username;
+    private boolean isRemember;
 }
