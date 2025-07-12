@@ -1,3 +1,4 @@
+# .github/workflows/format.yml
 name: Auto Format Java Code and Create PR
 
 on:
@@ -13,6 +14,12 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Check if actor is a bot (prevent infinite loop)
+        if: github.actor == 'github-actions[bot]'
+        run: |
+          echo "Skip formatting triggered by bot"
+          exit 0
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -22,28 +29,35 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Check code formatting with Spotless
+        run: mvn spotless:check || true  # Continue even if check fails
+
       - name: Run Spotless to auto-format code
         run: mvn spotless:apply
 
       - name: Check for changes
         id: changes
         run: |
-          if [[ `git status --porcelain` ]]; then
+          if [[ $(git status --porcelain) ]]; then
             echo "changes=true" >> $GITHUB_OUTPUT
           else
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create branch, commit and push
+      - name: Set branch name
+        if: steps.changes.outputs.changes == 'true'
+        id: vars
+        run: echo "branch=auto/format-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create branch, commit, and push
         if: steps.changes.outputs.changes == 'true'
         run: |
-          BRANCH_NAME="auto/format-$(date +'%Y%m%d')"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b $BRANCH_NAME
+          git checkout -b ${{ steps.vars.outputs.branch }}
           git add .
           git commit -m "chore(format): auto-format code with Spotless"
-          git push origin $BRANCH_NAME
+          git push origin ${{ steps.vars.outputs.branch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -54,6 +68,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "chore(format): auto-format code with Spotless"
           body: "This PR contains automatic code formatting changes."
-          branch: "auto/format-${{ steps.changes.outputs.date }}"
+          branch: ${{ steps.vars.outputs.branch }}
           base: main
           delete-branch: true
