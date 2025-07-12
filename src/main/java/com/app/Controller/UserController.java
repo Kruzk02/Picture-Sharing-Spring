@@ -81,89 +81,109 @@ public class UserController {
             content = @Content(mediaType = "application/json")),
         @ApiResponse(responseCode = "400", description = "Invalid input"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Login Data",required = true,
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginUserRequest.class))
-        )
-        @RequestBody LoginUserRequest request, @RequestParam(defaultValue = "false") boolean isRemember, HttpServletResponse response){
-        User user = userService.login(request);
+      })
+  @PostMapping("/login")
+  public ResponseEntity<JwtResponse> login(
+      @io.swagger.v3.oas.annotations.parameters.RequestBody(
+              description = "Login Data",
+              required = true,
+              content =
+                  @Content(
+                      mediaType = "application/json",
+                      schema = @Schema(implementation = LoginUserRequest.class)))
+          @RequestBody
+          LoginUserRequest request,
+      @RequestParam(defaultValue = "false") boolean isRemember,
+      HttpServletResponse response) {
+    User user = userService.login(request);
 
-        String accessToken = jwtAccessToken.generateToken(TokenRequest.builder()
-                .username(user.getUsername())
-                .isRemember(isRemember)
-                .build()
-        );
+    String accessToken =
+        jwtAccessToken.generateToken(
+            TokenRequest.builder().username(user.getUsername()).isRemember(isRemember).build());
 
-        if (isRemember) {
-            String refreshToken = jwtRefreshToken.generateToken(TokenRequest.builder()
-                    .username(user.getUsername())
-                    .isRemember(true)
-                    .build()
-            );
+    if (isRemember) {
+      String refreshToken =
+          jwtRefreshToken.generateToken(
+              TokenRequest.builder().username(user.getUsername()).isRemember(true).build());
 
-            Cookie cookie = new Cookie("refresh_token", refreshToken);
-            cookie.setHttpOnly(true);
-            cookie.setSecure(false);
-            cookie.setPath("http://localhost:8080/api/users/refresh");
-            cookie.setMaxAge(30 * 24 * 60 * 60);
+      Cookie cookie = new Cookie("refresh_token", refreshToken);
+      cookie.setHttpOnly(true);
+      cookie.setSecure(false);
+      cookie.setPath("http://localhost:8080/api/users/refresh");
+      cookie.setMaxAge(30 * 24 * 60 * 60);
 
-            response.addCookie(cookie);
-
-        }
-
-        return ResponseEntity.status(HttpStatus.OK)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new JwtResponse(accessToken));
+      response.addCookie(cookie);
     }
 
-    @Operation(summary = "Register user account")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Success create account",content = {@Content(mediaType = "application/json",schema = @Schema(implementation = User.class))}),
-        @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "409", description = "Username or email is already taken", content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json"))
-    })
-    @PostMapping("/register")
-    public ResponseEntity<JwtResponse> register(@RequestBody RegisterUserRequest request) {
-        User user = userService.register(request);
+    return ResponseEntity.status(HttpStatus.OK)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(new JwtResponse(accessToken));
+  }
 
-        String token = jwtAccessToken.generateToken(TokenRequest.builder()
-                .username(user.getUsername())
-                .isRemember(false)
-                .build()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(new JwtResponse(token));
+  @Operation(summary = "Register user account")
+  @ApiResponses(
+      value = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "Success create account",
+            content = {
+              @Content(
+                  mediaType = "application/json",
+                  schema = @Schema(implementation = User.class))
+            }),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid input",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(
+            responseCode = "409",
+            description = "Username or email is already taken",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(mediaType = "application/json"))
+      })
+  @PostMapping("/register")
+  public ResponseEntity<JwtResponse> register(@RequestBody RegisterUserRequest request) {
+    User user = userService.register(request);
+
+    String token =
+        jwtAccessToken.generateToken(
+            TokenRequest.builder().username(user.getUsername()).isRemember(false).build());
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(new JwtResponse(token));
+  }
+
+  @PostMapping("/refresh")
+  public ResponseEntity<JwtResponse> refreshAccessToken(
+      @CookieValue(name = "refresh_token") String refreshToken,
+      @RequestHeader(name = "Authorization") String oldAccessToken) {
+    if (refreshToken == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<JwtResponse> refreshAccessToken(@CookieValue(name = "refresh_token") String refreshToken, @RequestHeader(name = "Authorization") String oldAccessToken) {
-        if (refreshToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    oldAccessToken = oldAccessToken.substring(7);
 
-        oldAccessToken = oldAccessToken.substring(7);
+    String username = jwtRefreshToken.extractUsernameFromToken(refreshToken);
+    if (username == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
 
-        String username = jwtRefreshToken.extractUsernameFromToken(refreshToken);
-        if (username == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    if (!jwtRefreshToken.validateToken(refreshToken, username)) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
 
-        if (!jwtRefreshToken.validateToken(refreshToken, username)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    long accessTokenExpiry =
+        jwtAccessToken.extractExpiration(oldAccessToken).getTime() - System.currentTimeMillis();
+    System.out.println(accessTokenExpiry);
+    redisTemplate
+        .opsForValue()
+        .set("blacklist:" + oldAccessToken, "blacklisted", accessTokenExpiry);
 
-        long accessTokenExpiry = jwtAccessToken.extractExpiration(oldAccessToken).getTime() - System.currentTimeMillis();
-        System.out.println(accessTokenExpiry);
-        redisTemplate.opsForValue().set("blacklist:" + oldAccessToken, "blacklisted", accessTokenExpiry);
-
-        String accessToken = jwtAccessToken.generateToken(TokenRequest.builder()
-                .username(username)
-                .build());
+    String accessToken =
+        jwtAccessToken.generateToken(TokenRequest.builder().username(username).build());
     return ResponseEntity.status(HttpStatus.CREATED)
         .contentType(MediaType.APPLICATION_JSON)
         .body(new JwtResponse(token));
