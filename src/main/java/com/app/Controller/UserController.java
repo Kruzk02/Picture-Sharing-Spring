@@ -78,7 +78,6 @@ public class UserController {
         User user = userService.login(request);
 
         String accessToken = jwtAccessToken.generateToken(TokenRequest.builder()
-                .claims(new HashMap<>())
                 .username(user.getUsername())
                 .isRemember(isRemember)
                 .build()
@@ -86,7 +85,6 @@ public class UserController {
 
         if (isRemember) {
             String refreshToken = jwtRefreshToken.generateToken(TokenRequest.builder()
-                    .claims(new HashMap<>())
                     .username(user.getUsername())
                     .isRemember(true)
                     .build()
@@ -119,7 +117,6 @@ public class UserController {
         User user = userService.register(request);
 
         String token = jwtAccessToken.generateToken(TokenRequest.builder()
-                .claims(new HashMap<>())
                 .username(user.getUsername())
                 .isRemember(false)
                 .build()
@@ -151,7 +148,6 @@ public class UserController {
         redisTemplate.opsForValue().set("blacklist:" + oldAccessToken, "blacklisted", accessTokenExpiry);
 
         String accessToken = jwtAccessToken.generateToken(TokenRequest.builder()
-                .claims(new HashMap<>())
                 .username(username)
                 .build());
         return ResponseEntity.status(HttpStatus.OK)
