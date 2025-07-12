@@ -12,15 +12,18 @@ import org.springframework.stereotype.Service;
 @Log4j2
 public class EmailEventConsumer {
 
-    private final EmailService emailService;
+  private final EmailService emailService;
 
-    @KafkaListener(topics = "${kafka.topic.email-event.name}", groupId = "email-group", containerFactory = "emailKafkaListenerContainerFactory")
-    public void listen(VerificationEmailEvent event) {
-        log.info("Receive event from topic: {}", event.toString());
-        try {
-            emailService.sendVerificationAccount(event.userEmail(), event.verificationToken());
-        } catch (Exception e) {
-            log.error("Error while processing email event: {}", event, e);
-        }
+  @KafkaListener(
+      topics = "${kafka.topic.email-event.name}",
+      groupId = "email-group",
+      containerFactory = "emailKafkaListenerContainerFactory")
+  public void listen(VerificationEmailEvent event) {
+    log.info("Receive event from topic: {}", event.toString());
+    try {
+      emailService.sendVerificationAccount(event.userEmail(), event.verificationToken());
+    } catch (Exception e) {
+      log.error("Error while processing email event: {}", event, e);
     }
+  }
 }

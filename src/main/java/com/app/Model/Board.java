@@ -1,9 +1,8 @@
 package com.app.Model;
 
-import lombok.*;
-
 import java.io.Serializable;
 import java.util.List;
+import lombok.*;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,9 +11,8 @@ import java.util.List;
 @Builder
 public class Board implements Serializable {
 
-    private Long id;
-    private User user;
-    private String name;
-    private List<Pin> pins;
-
+  private Long id;
+  private User user;
+  private String name;
+  private List<Pin> pins;
 }

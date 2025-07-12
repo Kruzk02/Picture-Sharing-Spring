@@ -11,23 +11,20 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 @Configuration
 public class RedisConnectionConfig {
 
-    @Value("${redis.host}")
-    private String redisHost;
+  @Value("${redis.host}")
+  private String redisHost;
 
-    @Value("${redis.port}")
-    private int redisPort;
+  @Value("${redis.port}")
+  private int redisPort;
 
-    @Bean
-    public LettuceConnectionFactory redisConnectionFactory(){
-        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost,redisPort));
-    }
+  @Bean
+  public LettuceConnectionFactory redisConnectionFactory() {
+    return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
+  }
 
-    @Bean
-    public RedisClient redisClient() {
-        return RedisClient.create(RedisURI.builder()
-                .withHost(redisHost)
-                .withPort(redisPort)
-                .withSsl(false)
-                .build());
-    }
+  @Bean
+  public RedisClient redisClient() {
+    return RedisClient.create(
+        RedisURI.builder().withHost(redisHost).withPort(redisPort).withSsl(false).build());
+  }
 }

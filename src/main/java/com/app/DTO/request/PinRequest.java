@@ -1,11 +1,6 @@
 package com.app.DTO.request;
 
+import java.util.Set;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Set;
-
-public record PinRequest(
-        String description,
-        MultipartFile file,
-        Set<String> hashtags
-) { }
+public record PinRequest(String description, MultipartFile file, Set<String> hashtags) {}

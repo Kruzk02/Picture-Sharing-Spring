@@ -1,0 +1,59 @@
+name: Auto Format Java Code and Create PR
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Run Spotless to auto-format code
+        run: mvn spotless:apply
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create branch, commit and push
+        if: steps.changes.outputs.changes == 'true'
+        run: |
+          BRANCH_NAME="auto/format-$(date +'%Y%m%d')"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b $BRANCH_NAME
+          git add .
+          git commit -m "chore(format): auto-format code with Spotless"
+          git push origin $BRANCH_NAME
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(format): auto-format code with Spotless"
+          body: "This PR contains automatic code formatting changes."
+          branch: "auto/format-${{ steps.changes.outputs.date }}"
+          base: main
+          delete-branch: true

@@ -1,12 +1,11 @@
 package com.app.Model;
 
+import java.io.Serializable;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,11 +13,10 @@ import java.time.LocalDateTime;
 @Builder
 public class SubComment implements Serializable {
 
-    private long id;
-    private String content;
-    private Comment comment;
-    private User user;
-    private Media media;
-    private LocalDateTime createAt;
-
+  private long id;
+  private String content;
+  private Comment comment;
+  private User user;
+  private Media media;
+  private LocalDateTime createAt;
 }

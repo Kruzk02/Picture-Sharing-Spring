@@ -6,9 +6,13 @@ import com.app.DTO.request.UpdateUserRequest;
 import com.app.Model.User;
 
 public interface UserService {
-    User register(RegisterUserRequest request);
-    User login(LoginUserRequest request);
-    User findFullUserByUsername(String username);
-    User update(UpdateUserRequest request);
-    void verifyAccount(String token);
+  User register(RegisterUserRequest request);
+
+  User login(LoginUserRequest request);
+
+  User findFullUserByUsername(String username);
+
+  User update(UpdateUserRequest request);
+
+  void verifyAccount(String token);
 }

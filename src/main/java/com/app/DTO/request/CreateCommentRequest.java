@@ -1,12 +1,7 @@
 package com.app.DTO.request;
 
+import java.util.Set;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Set;
-
 public record CreateCommentRequest(
-    String content,
-    Long pinId,
-    MultipartFile media,
-    Set<String> tags
-) { }
+    String content, Long pinId, MultipartFile media, Set<String> tags) {}

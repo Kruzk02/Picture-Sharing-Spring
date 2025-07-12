@@ -11,10 +11,15 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+
 import java.security.Key;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
 
 @Service(value = "jwtRefreshToken")
 public class JwtRefreshToken implements JwtProvider {

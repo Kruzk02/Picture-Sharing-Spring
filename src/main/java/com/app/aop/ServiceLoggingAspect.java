@@ -1,6 +1,7 @@
 package com.app.aop;
 
 import com.app.annotations.NoLogging;
+import java.util.Arrays;
 import lombok.extern.log4j.Log4j2;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -8,48 +9,46 @@ import org.aspectj.lang.annotation.*;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-
 @Aspect
 @Component
 @Log4j2
 public class ServiceLoggingAspect {
 
-    @Pointcut("execution(* com.app.Service..*.*(..))")
-    public void serviceLayer(){}
+  @Pointcut("execution(* com.app.Service..*.*(..))")
+  public void serviceLayer() {}
 
-    @Before("serviceLayer()")
-    public void logBeforeService(JoinPoint joinPoint) {
-        log.info("Entering Method: {} in {}",
-                joinPoint.getSignature().getName(),
-                joinPoint.getTarget().getClass().getSimpleName()
-        );
+  @Before("serviceLayer()")
+  public void logBeforeService(JoinPoint joinPoint) {
+    log.info(
+        "Entering Method: {} in {}",
+        joinPoint.getSignature().getName(),
+        joinPoint.getTarget().getClass().getSimpleName());
+  }
+
+  @Around("serviceLayer()")
+  public Object logOperations(ProceedingJoinPoint joinPoint) throws Throwable {
+    var signature = (MethodSignature) joinPoint.getSignature();
+    var method = signature.getMethod();
+    Object[] args = joinPoint.getArgs();
+
+    if (method.isAnnotationPresent(NoLogging.class)) {
+      return joinPoint.proceed();
     }
 
-    @Around("serviceLayer()")
-    public Object logOperations(ProceedingJoinPoint joinPoint) throws Throwable {
-        var signature = (MethodSignature) joinPoint.getSignature();
-        var method = signature.getMethod();
-        Object[] args = joinPoint.getArgs();
+    long start = System.currentTimeMillis();
+    Object result = joinPoint.proceed();
+    long duration = System.currentTimeMillis() - start;
 
-        if (method.isAnnotationPresent(NoLogging.class)) {
-            return joinPoint.proceed();
-        }
+    log.info("Method {} called with args {} took {}ms", method, Arrays.toString(args), duration);
 
-        long start = System.currentTimeMillis();
-        Object result = joinPoint.proceed();
-        long duration = System.currentTimeMillis() - start;
+    return result;
+  }
 
-        log.info("Method {} called with args {} took {}ms", method, Arrays.toString(args), duration);
-
-        return result;
-    }
-
-    @After("serviceLayer()")
-    public void logAfterService(JoinPoint joinPoint) {
-        log.info("Exiting Method: {} in {}",
-                joinPoint.getSignature().getName(),
-                joinPoint.getTarget().getClass().getSimpleName()
-        );
-    }
+  @After("serviceLayer()")
+  public void logAfterService(JoinPoint joinPoint) {
+    log.info(
+        "Exiting Method: {} in {}",
+        joinPoint.getSignature().getName(),
+        joinPoint.getTarget().getClass().getSimpleName());
+  }
 }
