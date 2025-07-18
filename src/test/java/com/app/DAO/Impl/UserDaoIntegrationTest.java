@@ -2,105 +2,42 @@ package com.app.DAO.Impl;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.app.DAO.AbstractMySQLTest;
 import com.app.DAO.UserDao;
 import com.app.Model.*;
 import java.util.List;
-import javax.sql.DataSource;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
-class UserDaoIntegrationTest {
+class UserDaoIntegrationTest extends AbstractMySQLTest {
 
-  @Container static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8");
-
-  private JdbcTemplate jdbcTemplate;
   private UserDao userDao;
-
-  private User user;
 
   @BeforeEach
   void setUp() throws Exception {
-    DataSource dataSource =
-        DataSourceBuilder.create()
-            .url(mysql.getJdbcUrl())
-            .username(mysql.getUsername())
-            .password(mysql.getPassword())
-            .driverClassName(mysql.getDriverClassName())
-            .build();
-
-    jdbcTemplate = new JdbcTemplate(dataSource);
     userDao = new UserDaoImpl(jdbcTemplate);
-
-    jdbcTemplate.execute(
-        "CREATE TABLE IF NOT EXISTS media("
-            + "id INT AUTO_INCREMENT PRIMARY KEY,"
-            + "url VARCHAR(500) NOT NULL,"
-            + "media_type ENUM('VIDEO', 'IMAGE') NOT NULL,"
-            + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-            + ")");
-
-
-    jdbcTemplate.execute(
-        "CREATE TABLE IF NOT EXISTS users ("
-            + "id INT AUTO_INCREMENT PRIMARY KEY,"
-            + "username VARCHAR(255) NOT NULL,"
-            + "email VARCHAR(255) NOT NULL UNIQUE,"
-            + "password VARCHAR(255) NOT NULL,"
-            + "bio TEXT,"
-            + "gender ENUM('male', 'female', 'other') NOT NULL,"
-            + "enable BOOLEAN,"
-            + "media_id INT,"
-            + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-            + "FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE CASCADE"
-            + ")");
-    jdbcTemplate.execute(
-        "CREATE TABLE IF NOT EXISTS roles ("
-            + "id int auto_increment primary key,"
-            + "name VARCHAR(255)"
-            + ")");
-    jdbcTemplate.execute(
-        "CREATE TABLE IF NOT EXISTS users_roles("
-            + "role_id int,"
-            + "user_id int,"
-            + "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,"
-            + "FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE"
-            + ")");
-    jdbcTemplate.update(
-        "INSERT IGNORE INTO media (id, url, media_type) VALUES (?, ?, ?)", 1, "url", "IMAGE");
-    jdbcTemplate.update(
-        "INSERT IGNORE INTO roles (id, name) VALUES (?, ?)",
-        2,
-        "ROLE_USER"
-    );
-    user =
-        User.builder()
-            .id(1L)
-            .username("username")
-            .email("email@gmail.com")
-            .password("HashedPassword")
-            .gender(Gender.MALE)
-            .media(Media.builder().id(1L).mediaType(MediaType.IMAGE).url("url").build())
-            .roles(
-                List.of(
-                    Role.builder()
-                        .id(2L)
-                        .name("ROLE_USER")
-                        .privileges(List.of(Privilege.builder().id(2L).name("READ").build()))
-                        .build()))
-            .bio("bio")
-            .enable(false)
-            .build();
   }
 
   @Test
   void register() {
-    User savedUser = userDao.register(user);
+    User savedUser = userDao.register(User.builder()
+        .id(1L)
+        .username("username")
+        .email("email@gmail.com")
+        .password("HashedPassword")
+        .gender(Gender.MALE)
+        .media(Media.builder().id(1L).mediaType(MediaType.IMAGE).url("url").build())
+        .roles(
+            List.of(
+                Role.builder()
+                    .id(2L)
+                    .name("ROLE_USER")
+                    .privileges(List.of(Privilege.builder().id(2L).name("READ").build()))
+                    .build()))
+        .bio("bio")
+        .enable(false)
+        .build());
 
     assertNotNull(savedUser);
     assertNotNull(savedUser.getId());
@@ -125,6 +62,7 @@ class UserDaoIntegrationTest {
 
   @Test
   void login() {
+    insertTestUser();
     var savedUser = userDao.login("username");
 
     assertNotNull(savedUser);
@@ -136,6 +74,7 @@ class UserDaoIntegrationTest {
 
   @Test
   void findUserById() {
+    insertTestUser();
     var foundUser = userDao.findUserById(1L);
 
     assertNotNull(foundUser);
@@ -147,6 +86,7 @@ class UserDaoIntegrationTest {
 
   @Test
   void findUserByUsername() {
+    insertTestUser();
     var foundUser = userDao.findUserByUsername("username");
 
     assertNotNull(foundUser);
@@ -158,6 +98,7 @@ class UserDaoIntegrationTest {
 
   @Test
   void findUserByEmail() {
+    insertTestUser();
     var foundUser = userDao.findUserByEmail("email@gmail.com");
 
     assertNotNull(foundUser);
@@ -167,5 +108,84 @@ class UserDaoIntegrationTest {
     assertFalse(foundUser.getEnable());
   }
 
+  @Test
+  void findFullUserByUsername() {
+    insertTestUser();
+    User result = userDao.findFullUserByUsername("username");
 
+    assertNotNull(result);
+    assertEquals("username", result.getUsername());
+    assertEquals("email@gmail.com", result.getEmail());
+    assertEquals(Gender.MALE, result.getGender());
+    assertFalse(result.getEnable());
+
+    assertNotNull(result.getMedia());
+  }
+
+  @Test
+  void findPasswordNRoleByUsername() {
+    insertTestUser();
+
+    User result = userDao.findPasswordNRoleByUsername("username");
+
+    assertNotNull(result);
+    assertEquals("username", result.getUsername());
+    assertEquals("HashedPassword", result.getPassword());
+
+    assertNotNull(result.getRoles());
+  }
+
+  @Test
+  void update() {
+    insertTestUser();
+
+    var result = userDao.update(User.builder()
+        .id(1L)
+        .username("username123")
+        .email("email123@gmail.com")
+        .password("HashedPassword")
+        .gender(Gender.MALE)
+        .media(Media.builder().id(1L).mediaType(MediaType.IMAGE).url("url").build())
+        .roles(
+            List.of(
+                Role.builder()
+                    .id(2L)
+                    .name("ROLE_USER")
+                    .privileges(List.of(Privilege.builder().id(2L).name("READ").build()))
+                    .build()))
+        .bio("bio")
+        .enable(false)
+        .build());
+
+    assertNotNull(result);
+    assertEquals("username123", result.getUsername());
+    assertEquals("email123@gmail.com", result.getEmail());
+    assertEquals("HashedPassword", result.getPassword());
+    assertEquals(Gender.MALE, result.getGender());
+    assertFalse(result.getEnable());
+
+    assertNotNull(result.getMedia());
+  }
+
+  @Test
+  void checkAccountVerifyById() {
+    insertTestUser();
+
+    var result = userDao.checkAccountVerifyById(1L);
+
+    assertFalse(result);
+  }
+
+  private void insertTestUser() {
+    jdbcTemplate.update(
+        "INSERT INTO users (id, username, email, password, gender, bio, enable, media_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        1, "username", "email@gmail.com", "HashedPassword", "male", "bio", false, 1);
+    jdbcTemplate.update("INSERT INTO users_roles (user_id, role_id) VALUES (?, ?)", 1, 2);
+  }
+
+  @AfterEach
+  void cleanUp() {
+    jdbcTemplate.update("DELETE FROM users_roles");
+    jdbcTemplate.update("DELETE FROM users");
+  }
 }
