@@ -11,19 +11,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 public abstract class AbstractMySQLTest {
 
-  @Container
-  static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8");
+  @Container static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8");
 
   protected JdbcTemplate jdbcTemplate;
 
   @BeforeEach
   void setUpBase() {
-    DataSource dataSource = DataSourceBuilder.create()
-        .url(mysql.getJdbcUrl())
-        .username(mysql.getUsername())
-        .password(mysql.getPassword())
-        .driverClassName(mysql.getDriverClassName())
-        .build();
+    DataSource dataSource =
+        DataSourceBuilder.create()
+            .url(mysql.getJdbcUrl())
+            .username(mysql.getUsername())
+            .password(mysql.getPassword())
+            .driverClassName(mysql.getDriverClassName())
+            .build();
 
     jdbcTemplate = new JdbcTemplate(dataSource);
 
@@ -34,8 +34,6 @@ public abstract class AbstractMySQLTest {
             + "media_type ENUM('VIDEO', 'IMAGE') NOT NULL,"
             + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             + ")");
-
-
     jdbcTemplate.execute(
         "CREATE TABLE IF NOT EXISTS users ("
             + "id INT AUTO_INCREMENT PRIMARY KEY,"
@@ -55,18 +53,35 @@ public abstract class AbstractMySQLTest {
             + "name VARCHAR(255)"
             + ")");
     jdbcTemplate.execute(
+        "CREATE TABLE IF NOT EXISTS privileges("
+            + "id INT auto_increment PRIMARY KEY,"
+            + "name varchar(255) UNIQUE"
+            + ")");
+    jdbcTemplate.execute(
+        "CREATE TABLE IF NOT EXISTS roles_privileges ("
+            + "role_id int,"
+            + "privilege_id int,"
+            + "FOREIGN KEY (privilege_id) REFERENCES privileges(id),"
+            + "FOREIGN KEY (role_id) REFERENCES roles(id)"
+            + ")");
+    jdbcTemplate.execute(
         "CREATE TABLE IF NOT EXISTS users_roles("
             + "role_id int,"
             + "user_id int,"
             + "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,"
             + "FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE"
             + ")");
+    jdbcTemplate.execute(
+        "CREATE TABLE IF NOT EXISTS verification_token ("
+            + "id INT AUTO_INCREMENT PRIMARY KEY,"
+            + "token VARCHAR(255) UNIQUE NOT NULL,"
+            + "user_id INT NOT NULL,"
+            + "expiration_date DATETIME NOT NULL,"
+            + "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE\n"
+            + ")");
+
     jdbcTemplate.update(
         "INSERT IGNORE INTO media (id, url, media_type) VALUES (?, ?, ?)", 1, "url", "IMAGE");
-    jdbcTemplate.update(
-        "INSERT IGNORE INTO roles (id, name) VALUES (?, ?)",
-        2,
-        "ROLE_USER"
-    );
+    jdbcTemplate.update("INSERT IGNORE INTO roles (id, name) VALUES (?, ?)", 2, "ROLE_USER");
   }
 }

@@ -21,23 +21,25 @@ class UserDaoIntegrationTest extends AbstractMySQLTest {
 
   @Test
   void register() {
-    User savedUser = userDao.register(User.builder()
-        .id(1L)
-        .username("username")
-        .email("email@gmail.com")
-        .password("HashedPassword")
-        .gender(Gender.MALE)
-        .media(Media.builder().id(1L).mediaType(MediaType.IMAGE).url("url").build())
-        .roles(
-            List.of(
-                Role.builder()
-                    .id(2L)
-                    .name("ROLE_USER")
-                    .privileges(List.of(Privilege.builder().id(2L).name("READ").build()))
-                    .build()))
-        .bio("bio")
-        .enable(false)
-        .build());
+    User savedUser =
+        userDao.register(
+            User.builder()
+                .id(1L)
+                .username("username")
+                .email("email@gmail.com")
+                .password("HashedPassword")
+                .gender(Gender.MALE)
+                .media(Media.builder().id(1L).mediaType(MediaType.IMAGE).url("url").build())
+                .roles(
+                    List.of(
+                        Role.builder()
+                            .id(2L)
+                            .name("ROLE_USER")
+                            .privileges(List.of(Privilege.builder().id(2L).name("READ").build()))
+                            .build()))
+                .bio("bio")
+                .enable(false)
+                .build());
 
     assertNotNull(savedUser);
     assertNotNull(savedUser.getId());
@@ -139,23 +141,25 @@ class UserDaoIntegrationTest extends AbstractMySQLTest {
   void update() {
     insertTestUser();
 
-    var result = userDao.update(User.builder()
-        .id(1L)
-        .username("username123")
-        .email("email123@gmail.com")
-        .password("HashedPassword")
-        .gender(Gender.MALE)
-        .media(Media.builder().id(1L).mediaType(MediaType.IMAGE).url("url").build())
-        .roles(
-            List.of(
-                Role.builder()
-                    .id(2L)
-                    .name("ROLE_USER")
-                    .privileges(List.of(Privilege.builder().id(2L).name("READ").build()))
-                    .build()))
-        .bio("bio")
-        .enable(false)
-        .build());
+    var result =
+        userDao.update(
+            User.builder()
+                .id(1L)
+                .username("username123")
+                .email("email123@gmail.com")
+                .password("HashedPassword")
+                .gender(Gender.MALE)
+                .media(Media.builder().id(1L).mediaType(MediaType.IMAGE).url("url").build())
+                .roles(
+                    List.of(
+                        Role.builder()
+                            .id(2L)
+                            .name("ROLE_USER")
+                            .privileges(List.of(Privilege.builder().id(2L).name("READ").build()))
+                            .build()))
+                .bio("bio")
+                .enable(false)
+                .build());
 
     assertNotNull(result);
     assertEquals("username123", result.getUsername());
@@ -179,7 +183,14 @@ class UserDaoIntegrationTest extends AbstractMySQLTest {
   private void insertTestUser() {
     jdbcTemplate.update(
         "INSERT INTO users (id, username, email, password, gender, bio, enable, media_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        1, "username", "email@gmail.com", "HashedPassword", "male", "bio", false, 1);
+        1,
+        "username",
+        "email@gmail.com",
+        "HashedPassword",
+        "male",
+        "bio",
+        false,
+        1);
     jdbcTemplate.update("INSERT INTO users_roles (user_id, role_id) VALUES (?, ?)", 1, 2);
   }
 
